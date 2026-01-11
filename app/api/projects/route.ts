@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { QueryDocumentSnapshot } from "firebase-admin/firestore";
-import { adminDb } from "@/lib/firebaseAdmin";
+import { getAdminDb } from "@/lib/firebaseAdmin";
 
 function toIsoOrNull(v: any) {
   // Firestore Timestamp (Admin)
@@ -31,7 +31,7 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}));
     const featuredOnly = Boolean(body?.featuredOnly);
 
-    let q = adminDb.collection("projects").orderBy("order", "asc");
+    let q = getAdminDb().collection("projects").orderBy("order", "asc");
     if (featuredOnly) q = q.where("featured", "==", true);
 
     const snap = await q.get();

@@ -3,7 +3,7 @@ import { Code2, Server, Cloud, Wrench, Brain } from "lucide-react";
 
 export async function SkillsFull() {
   const skills = await getSkills();
-  console.log("skills", skills);
+  // console.log("skills", skills);
   // Hardcoded fallback data from CV if Firebase is empty
   const fallbackSkills = [
     // AI & LLM

@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     });
 
     // If you have RESEND_API_KEY configured, you can uncomment this:
-    console.log("process.env.RESEND_API_KEY", process.env.RESEND_API_KEY);
+    // console.log("process.env.RESEND_API_KEY", process.env.RESEND_API_KEY);
     if (process.env.RESEND_API_KEY) {
       const resend = new Resend(process.env.RESEND_API_KEY);
 

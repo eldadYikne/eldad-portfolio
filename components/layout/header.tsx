@@ -12,7 +12,7 @@ export function Header() {
           Eldad Yikne
         </Link>
 
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4">
           <Navigation />
           <ThemeToggle />
         </div>
