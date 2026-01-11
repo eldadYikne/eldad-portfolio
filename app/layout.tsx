@@ -40,7 +40,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <Script src="https://cdn.enable.co.il/licenses/enable-L53141et9topec3t-0126-77369/init.js" />
       <body className={`${inter.variable} font-sans antialiased`}>
         <ThemeProvider
           attribute="class"
@@ -58,6 +57,10 @@ export default function RootLayout({
             </div>
           </AuthProvider>
         </ThemeProvider>
+        <Script
+          strategy="afterInteractive"
+          src="https://cdn.enable.co.il/licenses/enable-L53141et9topec3t-0126-77369/init.js"
+        />
       </body>
     </html>
   );

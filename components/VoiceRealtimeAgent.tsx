@@ -67,12 +67,17 @@ export default function VoiceRealtimeAgent() {
       });
       const realtimeSession = new RealtimeSession(agent, {
         model: "gpt-realtime-preview",
-
         config: {
           inputAudioFormat: "pcm16",
           outputAudioFormat: "pcm16",
           inputAudioTranscription: {
             model: "gpt-4o-mini-transcribe",
+          },
+          turnDetection: {
+            type: "server_vad",
+            threshold: 0.5,
+            prefix_padding_ms: 300,
+            silence_duration_ms: 500,
           },
         },
       });
