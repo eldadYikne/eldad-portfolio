@@ -7,6 +7,7 @@ import { Footer } from "@/components/layout/footer";
 import "../styles/globals.css";
 import FloatingChat from "@/components/floatingChat";
 import VoiceRealtimeAgent from "../components/VoiceRealtimeAgent";
+import Script from "next/script";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -39,6 +40,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <Script src="https://cdn.enable.co.il/licenses/enable-L53141et9topec3t-0126-77369/init.js" />
       <body className={`${inter.variable} font-sans antialiased`}>
         <ThemeProvider
           attribute="class"
@@ -51,7 +53,7 @@ export default function RootLayout({
               <Header />
               <main className="flex-1">{children}</main>
               {/* <FloatingChat /> */}
-                <VoiceRealtimeAgent/>
+              <VoiceRealtimeAgent />
               <Footer />
             </div>
           </AuthProvider>

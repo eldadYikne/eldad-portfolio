@@ -1,8 +1,8 @@
-import Link from 'next/link'
-import { Github, Linkedin, Mail } from 'lucide-react'
+import Link from "next/link";
+import { Github, Linkedin, Mail } from "lucide-react";
 
 export function Footer() {
-  const currentYear = new Date().getFullYear()
+  const currentYear = new Date().getFullYear();
 
   return (
     <footer className="w-full border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-slate-900">
@@ -12,7 +12,8 @@ export function Footer() {
           <div>
             <h3 className="font-bold text-lg mb-4">Eldad Yikne</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              Full-Stack Developer specializing in modern web technologies and AI integration.
+              Full-Stack Developer specializing in modern web technologies and
+              AI integration.
             </p>
           </div>
 
@@ -21,17 +22,26 @@ export function Footer() {
             <h3 className="font-bold text-lg mb-4">Quick Links</h3>
             <ul className="space-y-2">
               <li>
-                <Link href="/projects" className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary-light dark:hover:text-primary-dark transition-colors">
+                <Link
+                  href="/projects"
+                  className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary-light dark:hover:text-primary-dark transition-colors"
+                >
                   Projects
                 </Link>
               </li>
               <li>
-                <Link href="/about" className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary-light dark:hover:text-primary-dark transition-colors">
+                <Link
+                  href="/about"
+                  className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary-light dark:hover:text-primary-dark transition-colors"
+                >
                   About
                 </Link>
               </li>
               <li>
-                <Link href="/contact" className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary-light dark:hover:text-primary-dark transition-colors">
+                <Link
+                  href="/contact"
+                  className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary-light dark:hover:text-primary-dark transition-colors"
+                >
                   Contact
                 </Link>
               </li>
@@ -43,7 +53,7 @@ export function Footer() {
             <h3 className="font-bold text-lg mb-4">Connect</h3>
             <div className="flex gap-4">
               <a
-                href="https://github.com/eldadykn"
+                href="https://github.com/eldadYikne"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-gray-600 dark:text-gray-400 hover:text-primary-light dark:hover:text-primary-dark transition-colors"
@@ -78,5 +88,5 @@ export function Footer() {
         </div>
       </div>
     </footer>
-  )
+  );
 }
