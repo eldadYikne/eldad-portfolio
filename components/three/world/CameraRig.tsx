@@ -11,6 +11,8 @@ export const SECTIONS: Record<Section, { pos: [number, number, number]; look: [n
   projects: { pos: [7.6, 4.6, 6.8], look: [7.6, 1.2, -1.2] },
   skills: { pos: [0, 8.8, 3.6], look: [0, 0.4, -5.2] },
   education: { pos: [-5.6, 4.8, 1.8], look: [-9, 0.8, -6.4] },
+  // Offset left so the board sits to the right of the form panel.
+  contact: { pos: [-2, 6, 5.4], look: [-2, 4.3, -9.3] },
 };
 
 /** Shared with depth of field so focus follows whatever the camera is looking at. */

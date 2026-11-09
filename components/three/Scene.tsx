@@ -19,6 +19,8 @@ import { ProjectMachines } from "./objects/ProjectMachines";
 import { EducationStack } from "./objects/EducationStack";
 import { MotionCursor } from "./interaction/MotionCursor";
 import { SelectedCard } from "./ui/SelectedCard";
+import { ContactBoard } from "./contact/ContactBoard";
+import { AgentSquad } from "./contact/AgentSquad";
 
 const DPR: Record<Quality, [number, number]> = {
   high: [1, 1.75],
@@ -73,6 +75,8 @@ export default function Scene() {
           </Staggered>
           <ProjectMachines />
           <MotionCursor />
+          <ContactBoard />
+          <ContactSquad />
         </Physics>
         <Floor />
         <Dust count={quality === "low" ? 600 : 1600} />
@@ -108,6 +112,12 @@ function ZeroGKick({ zeroG }: { zeroG: boolean }) {
     });
   }, [zeroG]);
   return null;
+}
+
+/** The squad only exists while the secure channel is open. */
+function ContactSquad() {
+  const open = useWorld((s) => s.section === "contact");
+  return open ? <AgentSquad /> : null;
 }
 
 function Ready() {

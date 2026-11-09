@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import Link from "next/link";
 import { profile } from "@/content/portfolio";
 import { useWorld, type Section } from "../store";
 import { MotionLab } from "../interaction/MotionLab";
+import { ContactForm } from "./ContactForm";
 
 const NAV: { id: Section; label: string; key: string }[] = [
   { id: "hero", label: "Origin", key: "1" },
@@ -28,7 +28,7 @@ export function Hud() {
     const onKey = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement)?.closest("input, textarea")) return;
       const s = useWorld.getState();
-      const idx = NAV.findIndex((n) => n.id === s.section);
+      const idx = Math.max(0, NAV.findIndex((n) => n.id === s.section));
       if (e.key === "Escape") s.select(null);
       else if (e.key === "ArrowRight") s.goTo(NAV[(idx + 1) % NAV.length].id);
       else if (e.key === "ArrowLeft") s.goTo(NAV[(idx - 1 + NAV.length) % NAV.length].id);
@@ -65,8 +65,12 @@ export function Hud() {
           ))}
         </nav>
         <div className="hud-links">
-          <Link href="/projects">Classic site</Link>
-          <Link href="/contact" className="hud-cta">Contact</Link>
+          <button
+            className={`hud-cta ${section === "contact" ? "active" : ""}`}
+            onClick={() => goTo(section === "contact" ? "hero" : "contact")}
+          >
+            {section === "contact" ? "Close channel" : "Contact"}
+          </button>
         </div>
       </header>
 
@@ -87,6 +91,7 @@ export function Hud() {
       <Fps />
       <Tooltip />
       <MotionLab />
+      <ContactForm />
     </div>
   );
 }

@@ -1,6 +1,8 @@
 import { create } from "zustand";
 
-export type Section = "hero" | "experience" | "projects" | "skills" | "education";
+export type Section = "hero" | "experience" | "projects" | "skills" | "education" | "contact";
+export type ContactField = "name" | "email" | "message";
+export type ContactStatus = "idle" | "sending" | "sent" | "error";
 export type WorldMode = "void" | "heroes";
 export type Selection =
   | { kind: "bio" }
@@ -26,6 +28,8 @@ type State = {
   impact: [number, number, number];
   selected: Selection;
   tooltip: { text: string; color: string } | null;
+  contact: Record<ContactField, string>;
+  contactStatus: ContactStatus;
 
   setReady: () => void;
   setQuality: (q: Quality) => void;
@@ -40,6 +44,8 @@ type State = {
   kick: (amount: number) => void;
   select: (s: Selection) => void;
   setTooltip: (t: State["tooltip"]) => void;
+  setContact: (field: ContactField, value: string) => void;
+  setContactStatus: (s: ContactStatus) => void;
 };
 
 /** Per-frame effect values that must not trigger React renders. */
@@ -58,13 +64,15 @@ export const useWorld = create<State>((set, get) => ({
   impact: [0, 2.5, 2],
   selected: null,
   tooltip: null,
+  contact: { name: "", email: "", message: "" },
+  contactStatus: "idle",
 
   setReady: () => set({ ready: true }),
   setQuality: (quality) => set({ quality }),
   setReducedMotion: (reducedMotion) => set({ reducedMotion }),
   goTo: (section) => {
     document.body.style.cursor = "";
-    set({ section, tooltip: null });
+    set({ section, tooltip: null, selected: null });
   },
   toggleMode: () => {
     set((s) => ({ mode: s.mode === "void" ? "heroes" : "void" }));
@@ -93,6 +101,12 @@ export const useWorld = create<State>((set, get) => ({
   },
   select: (selected) => set({ selected }),
   setTooltip: (tooltip) => set({ tooltip }),
+  setContact: (field, value) =>
+    set((s) => ({ contact: { ...s.contact, [field]: value }, contactStatus: s.contactStatus === "sent" ? "idle" : s.contactStatus })),
+  setContactStatus: (contactStatus) => {
+    set({ contactStatus });
+    if (contactStatus === "sent") get().kick(0.9);
+  },
 }));
 
 export const palettes: Record<WorldMode, { a: string; b: string; fog: string; floor: string }> = {
