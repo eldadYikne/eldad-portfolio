@@ -1,7 +1,5 @@
-import { ChatOpenAI, OpenAIEmbeddings } from "@langchain/openai";
+import { ChatOpenAI } from "@langchain/openai";
 import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
-import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
-import { MemoryVectorStore } from "@langchain/classic/vectorstores/memory";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { Document } from "@langchain/core/documents";
 import { StringOutputParser } from "@langchain/core/output_parsers";
@@ -15,10 +13,32 @@ import type { Project, Skill, WorkExperience } from "@/types";
 import path from "path";
 import fs from "fs";
 
-// Cache for vector store to avoid reloading PDFs on every request
-let vectorStoreCache: MemoryVectorStore | null = null;
+// The whole knowledge base (CV PDFs + Firestore) is a few thousand characters,
+// so it's sent in full with every question instead of embedding + retrieval.
+// Cached to avoid re-reading PDFs and Firestore on every request.
+let knowledgeCache: Document[] | null = null;
 let lastLoadTime: number = 0;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Chat model. Uses OpenRouter when OPENROUTER_API_KEY is set (any model via
+ * OPENROUTER_MODEL, e.g. "anthropic/claude-sonnet-4.5"), otherwise OpenAI.
+ */
+function chatModel(streaming: boolean) {
+  if (process.env.OPENROUTER_API_KEY) {
+    return new ChatOpenAI({
+      model: process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini",
+      apiKey: process.env.OPENROUTER_API_KEY,
+      temperature: 0.7,
+      streaming,
+      configuration: {
+        baseURL: "https://openrouter.ai/api/v1",
+        defaultHeaders: { "HTTP-Referer": "https://www.eldadyikne.com", "X-Title": "Eldad Yikne Portfolio" },
+      },
+    });
+  }
+  return new ChatOpenAI({ model: "gpt-4o-mini", temperature: 0.7, streaming });
+}
 
 // Format Firestore data as documents
 function formatProjectsAsText(projects: Project[]): string {
@@ -135,38 +155,15 @@ async function loadFirestoreData(): Promise<Document[]> {
   return docs;
 }
 
-async function getVectorStore(): Promise<MemoryVectorStore> {
+async function getKnowledge(): Promise<Document[]> {
   const now = Date.now();
-
-  // Return cached vector store if still valid
-  if (vectorStoreCache && now - lastLoadTime < CACHE_DURATION) {
-    return vectorStoreCache;
-  }
+  if (knowledgeCache && now - lastLoadTime < CACHE_DURATION) return knowledgeCache;
 
   // Load PDFs and Firestore data in parallel
-  const [pdfDocs, firestoreDocs] = await Promise.all([
-    loadPDFs(),
-    loadFirestoreData(),
-  ]);
-
-  const allDocs = [...pdfDocs, ...firestoreDocs];
-
-  // Split documents into chunks
-  const textSplitter = new RecursiveCharacterTextSplitter({
-    chunkSize: 1000,
-    chunkOverlap: 200,
-  });
-  const splitDocs = await textSplitter.splitDocuments(allDocs);
-
-  // Create embeddings and vector store
-  const embeddings = new OpenAIEmbeddings();
-  vectorStoreCache = await MemoryVectorStore.fromDocuments(
-    splitDocs,
-    embeddings
-  );
+  const [pdfDocs, firestoreDocs] = await Promise.all([loadPDFs(), loadFirestoreData()]);
+  knowledgeCache = [...pdfDocs, ...firestoreDocs];
   lastLoadTime = now;
-
-  return vectorStoreCache;
+  return knowledgeCache;
 }
 
 function formatDocs(docs: Document[]): string {
@@ -175,32 +172,36 @@ function formatDocs(docs: Document[]): string {
 
 export async function POST(req: Request) {
   try {
-    const { prompt: input, stream: useStream = true } = await req.json();
+    const {
+      prompt: input,
+      stream: useStream = true,
+      persona,
+      history = [],
+    } = await req.json();
+    const isNpc = persona === "npc";
 
     if (!input || typeof input !== "string") {
       return Response.json({ error: "Invalid prompt" }, { status: 400 });
     }
 
-    // Initialize the model with streaming enabled
-    const model = new ChatOpenAI({
-      modelName: "gpt-4o-mini",
-      temperature: 0.7,
-      streaming: useStream,
-    });
+    const model = chatModel(useStream);
 
-    // Get or create vector store
-    const vectorStore = await getVectorStore();
-    const retriever = vectorStore.asRetriever({
-      k: 6,
-    });
+    const knowledge = await getKnowledge();
+    const context = formatDocs(knowledge);
+    const sources = [...new Set(knowledge.map((doc) => doc.metadata.source))];
 
-    // Get relevant documents
-    const relevantDocs = await retriever.invoke(input);
-    const context = formatDocs(relevantDocs);
-    const sources = [...new Set(relevantDocs.map((doc) => doc.metadata.source))];
+    // The in-game "digital twin" speaks as Eldad, briefly, in the visitor's language.
+    const npcPrompt = `You are the AI digital twin of Eldad Yikne, standing on his portfolio island game.
+Speak in FIRST PERSON as Eldad ("I built...", "At Codere I...").
+Always answer in the same language the visitor wrote in (Hebrew → Hebrew, English → English).
+Keep answers short and lively: 2-4 sentences, no markdown, no bullet lists.
+Use only the facts below. If something isn't covered, say you'd love to talk about it in person and suggest the pier (contact).
+
+Facts about me:
+{context}`;
 
     // Create the prompt template
-    const systemPrompt = `אתה עוזר אישי חכם של אלדד יקנה (Eldad Yikne).
+    const systemPrompt = isNpc ? npcPrompt : `אתה עוזר אישי חכם של אלדד יקנה (Eldad Yikne).
 אתה עונה על שאלות בעברית בלבד.
 יש לך גישה למידע מקבצי PDF, פרויקטים, כישורים וניסיון תעסוקתי של אלדד.
 
@@ -217,8 +218,16 @@ export async function POST(req: Request) {
 - אם שואלים על כישורים - ציין את רמת המיומנות
 - אם שואלים על ניסיון - תן פרטים על החברות, התפקידים וההישגים`;
 
+    // A few previous turns keep follow-up questions ("and what stack?") coherent.
+    const past = (Array.isArray(history) ? history : [])
+      .slice(-6)
+      .filter((m: { role?: string; content?: string }) => typeof m?.content === "string")
+      .map((m: { role: string; content: string }) =>
+        [m.role === "assistant" ? "ai" : "human", m.content.replace(/[{}]/g, "")] as ["ai" | "human", string]
+      );
     const prompt = ChatPromptTemplate.fromMessages([
       ["system", systemPrompt],
+      ...past,
       ["human", "{input}"],
     ]);
 
