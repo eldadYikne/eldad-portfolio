@@ -1,0 +1,34 @@
+.pad {
+  --ink: #2a1f3d;
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: radial-gradient(circle at 50% 30%, #a5e8ff, #3b9be8);
+  font-family: var(--font-game), system-ui, sans-serif;
+  color: #fff;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  overscroll-behavior: none;
+}
+.pad-top { display: flex; align-items: center; gap: 10px; padding: 14px 18px; }
+.pad-top strong { font-weight: 400; font-size: 20px; -webkit-text-stroke: 4px var(--ink); paint-order: stroke fill; }
+.pad-dot { width: 14px; height: 14px; border-radius: 50%; border: 3px solid var(--ink); background: #facc15; }
+.pad-dot.ready { background: #22c55e; }
+.pad-dot.lost, .pad-dot.noid { background: #ef4444; }
+.pad-hp { margin-left: auto; width: 140px; height: 18px; border: 3px solid var(--ink); border-radius: 8px; background: #1f2937; overflow: hidden; }
+.pad-hp span { display: block; height: 100%; background: #22c55e; transition: width 0.2s; }
+.pad-sticks { flex: 1; display: flex; align-items: center; justify-content: space-around; gap: 12px; padding: 0 12px 20px; }
+.pad-stick-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.pad-stick-wrap > span { font-size: 16px; -webkit-text-stroke: 3px var(--ink); paint-order: stroke fill; }
+.pad-stick { position: relative; width: 180px; height: 180px; border-radius: 50%; border: 5px solid var(--ink); background: color-mix(in srgb, var(--c) 40%, transparent); touch-action: none; }
+.pad-knob { position: absolute; inset: 50px; border-radius: 50%; border: 5px solid var(--ink); background: var(--c); box-shadow: 0 6px 0 var(--ink); }
+.pad-center { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.pad-start { padding: 14px 22px; border: 4px solid var(--ink); border-radius: 18px; background: #ef4444; color: #fff; font-family: inherit; font-size: 22px; -webkit-text-stroke: 4px var(--ink); paint-order: stroke fill; box-shadow: 0 6px 0 var(--ink); }
+.pad-tip { margin: 0; font-size: 13px; opacity: 0.85; text-align: center; }
+@media (orientation: portrait) {
+  .pad-sticks { flex-direction: column; justify-content: space-evenly; }
+  .pad-stick { width: 160px; height: 160px; }
+  .pad-knob { inset: 44px; }
+}

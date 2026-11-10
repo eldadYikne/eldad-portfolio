@@ -5,6 +5,11 @@ import { NESTS, PLAYER_LEVEL, ZONES, islandRadius, zoneById } from "../world";
 import { BOSSES } from "../combat/defs";
 import { useCombat } from "../combat/state";
 import { MissionHud } from "./MissionHud";
+import { NpcChat } from "../npc/NpcChat";
+import { PhoneButton } from "./PhoneButton";
+import { usePresence } from "../social/presence";
+import { CityCard, WarpFlash } from "../city/CityCard";
+import { useCity } from "../city/state";
 import { isMuted, onMute, setMuted } from "../audio";
 import { input, isTyping, player, useGame } from "../store";
 import { ZoneCard } from "./ZoneCard";
@@ -40,9 +45,13 @@ export function Hud() {
         </div>
       </div>
 
+      <OnlineCount />
       <div className="side">
         <div className="side-row">
-          <MuteButton />
+          <div className="side-btns">
+            <MuteButton />
+            <PhoneButton />
+          </div>
           <Minimap />
         </div>
         <Quests />
@@ -50,6 +59,9 @@ export function Hud() {
 
       <RewardPop />
       {!inMission && <ZoneCard />}
+      {!inMission && <NpcChat />}
+      {!inMission && <CityCard />}
+      <WarpFlash />
       <MissionHud />
       <Joystick mode="move" />
       {inMission && <Joystick mode="aim" />}
@@ -102,6 +114,7 @@ function Quests() {
 /** SVG minimap; the player dot is moved directly every frame (no React renders). */
 function Minimap() {
   const dot = useRef<SVGGElement>(null);
+  const inCity = useCity((s) => s.inCity);
   const visited = useGame((s) => s.visited);
   const S = 30; // world half-size shown
   const coast = Array.from({ length: 90 }, (_, i) => {
@@ -125,6 +138,8 @@ function Minimap() {
   }, []);
 
   return (
+    <div className="minimap-wrap">
+    {inCity && <div className="minimap-city">🏙️ GitHub City</div>}
     <svg className="minimap" viewBox={`${-S} ${-S} ${S * 2} ${S * 2}`} role="img" aria-label="Island map">
       <circle r={S} fill="#2a8fd6" />
       <polygon points={coast} fill="#6fd47a" stroke="#f7d9a0" strokeWidth={1.2} />
@@ -154,6 +169,7 @@ function Minimap() {
         <path d="M0 -3.6 L1.6 -1.2 L-1.6 -1.2 Z" fill="#fff" />
       </g>
     </svg>
+    </div>
   );
 }
 
@@ -171,6 +187,16 @@ function RewardPop() {
     <div key={show.at} className="reward" aria-live="polite">
       <span>+100 XP</span>
       <small>Discovered {zoneById[show.id].label}</small>
+    </div>
+  );
+}
+
+function OnlineCount() {
+  const n = usePresence((s) => s.ids.length);
+  if (n === 0) return null;
+  return (
+    <div className="online" aria-live="polite">
+      <span className="dot-live" /> 👻 {n} {n === 1 ? "explorer" : "explorers"} here right now
     </div>
   );
 }

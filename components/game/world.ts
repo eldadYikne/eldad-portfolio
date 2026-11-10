@@ -129,7 +129,34 @@ export const NESTS: Nest[] = [
 ];
 export const nestById = Object.fromEntries(NESTS.map((n) => [n.id, n])) as Record<BossId, Nest>;
 
+/* ---------------- GitHub City: a second island to the north ---------------- */
+
+export const CITY = { x: 0, z: -64, half: 15 };
+/** Portal on the main island, and the return portal in the city. */
+export const PORTALS = {
+  toCity: { x: 15.5, z: 12.5 },
+  toIsland: { x: 0, z: CITY.z + CITY.half - 2.5 },
+};
+
+export function insideCity(x: number, z: number, margin = 0) {
+  return Math.abs(x - CITY.x) < CITY.half - margin && Math.abs(z - CITY.z) < CITY.half - margin;
+}
+
+/** Anywhere the player may stand. */
+export function walkable(x: number, z: number) {
+  return insideIsland(x, z, 1.2) || insideCity(x, z, 0.8);
+}
+
+/** Building footprints in the city, filled once the repos load. */
+export const CITY_COLLIDERS: { x: number; z: number; r: number }[] = [];
+
+/* ---------------- the AI digital twin NPC ---------------- */
+
+export const NPC = { pos: [-4.4, 3.4] as [number, number], ring: [-3.1, 4.7] as [number, number], ringR: 1.6 };
+
 function nearZone(x: number, z: number, pad: number) {
+  if (Math.hypot(x - PORTALS.toCity.x, z - PORTALS.toCity.z) < 2 + pad) return true;
+  if (Math.hypot(x - NPC.pos[0], z - NPC.pos[1]) < 1.4 + pad || Math.hypot(x - NPC.ring[0], z - NPC.ring[1]) < NPC.ringR + pad) return true;
   if (NESTS.some((n) => Math.hypot(x - n.pos[0], z - n.pos[1]) < 2.6 + pad || Math.hypot(x - n.ring[0], z - n.ring[1]) < n.ringR + pad)) return true;
   return ZONES.some((zn) => Math.hypot(x - zn.pos[0], z - zn.pos[1]) < zn.solidR + pad || Math.hypot(x - zn.ring[0], z - zn.ring[1]) < zn.ringR + pad * 0.6);
 }
@@ -171,6 +198,7 @@ export const FLOWERS = scatter(5, 220, (x, z) => insideIsland(x, z, 0.8) && dist
 export const COLLIDERS: { x: number; z: number; r: number }[] = [
   ...ZONES.map((z) => ({ x: z.pos[0], z: z.pos[1], r: z.solidR })),
   ...NESTS.map((n) => ({ x: n.pos[0], z: n.pos[1], r: 1.6 })),
+  { x: NPC.pos[0], z: NPC.pos[1], r: 0.7 },
   ...TREES.map((t) => ({ x: t.x, z: t.z, r: 0.55 * t.s })),
   ...ROCKS.filter((r) => r.s > 0.6).map((r) => ({ x: r.x, z: r.z, r: 0.6 * r.s })),
 ];

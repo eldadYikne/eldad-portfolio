@@ -4,8 +4,8 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { Html, Outlines } from "@react-three/drei";
 import * as THREE from "three";
-import { COLLIDERS, PALETTE, PLAYER_LEVEL, ZONES, insideIsland } from "../world";
-import { toon } from "../toon";
+import { CITY_COLLIDERS, COLLIDERS, PALETTE, PLAYER_LEVEL, ZONES, walkable } from "../world";
+import { toon, toon as toonMat } from "../toon";
 import { input, player, useGame } from "../store";
 import { sim, useCombat } from "../combat/state";
 import type { WeaponId } from "../combat/defs";
@@ -14,6 +14,7 @@ const SPEED = 6.5;
 const RADIUS = 0.45;
 const CAM_OFFSET = new THREE.Vector3(0, 23, 17);
 
+const COLLIDER_LISTS = [COLLIDERS, CITY_COLLIDERS];
 const move = new THREE.Vector3();
 const camTarget = new THREE.Vector3();
 const lookAt = new THREE.Vector3();
@@ -85,18 +86,19 @@ export function Player() {
       let nx = player.x + move.x;
       let nz = player.z + move.z;
       // Push out of landmarks, trees and rocks.
-      for (const c of COLLIDERS) {
-        const dx = nx - c.x;
-        const dz = nz - c.z;
-        const d = Math.hypot(dx, dz);
-        const min = c.r + RADIUS;
-        if (d < min && d > 1e-4) {
-          nx = c.x + (dx / d) * min;
-          nz = c.z + (dz / d) * min;
+      for (const list of COLLIDER_LISTS)
+        for (const c of list) {
+          const dx = nx - c.x;
+          const dz = nz - c.z;
+          const d = Math.hypot(dx, dz);
+          const min = c.r + RADIUS;
+          if (d < min && d > 1e-4) {
+            nx = c.x + (dx / d) * min;
+            nz = c.z + (dz / d) * min;
+          }
         }
-      }
-      // Stay on the island.
-      if (insideIsland(nx, nz, 1.2)) {
+      // Stay on solid ground (the island or GitHub City).
+      if (walkable(nx, nz)) {
         player.x = nx;
         player.z = nz;
       } else input.target = null;
@@ -208,10 +210,26 @@ export function Player() {
   );
 }
 
-type LimbRef = React.RefObject<THREE.Group | null>;
+type LimbRef = React.RefObject<THREE.Group | null> | undefined;
 
-function Avatar({ legL, legR, armL, armR }: { legL: LimbRef; legR: LimbRef; armL: LimbRef; armR: LimbRef }) {
-  const ink = <Outlines thickness={0.03} color={PALETTE.outline} />;
+/** The avatar model. `holo` swaps every material (used by the AI digital twin). */
+export function Avatar({
+  legL,
+  legR,
+  armL,
+  armR,
+  holo,
+  weapon = true,
+}: {
+  legL?: LimbRef;
+  legR?: LimbRef;
+  armL?: LimbRef;
+  armR?: LimbRef;
+  holo?: THREE.Material;
+  weapon?: boolean;
+}) {
+  const toon: typeof toonMat = (c, o) => (holo as THREE.MeshToonMaterial) ?? toonMat(c, o);
+  const ink = holo ? null : <Outlines thickness={0.03} color={PALETTE.outline} />;
   const skin = toon("#e0a27c");
   const hoodie = toon(PALETTE.coral);
   const pants = toon(PALETTE.navy);
@@ -263,7 +281,7 @@ function Avatar({ legL, legR, armL, armR }: { legL: LimbRef; legR: LimbRef; armL
             <sphereGeometry args={[0.11, 10, 10]} />
             {ink}
           </mesh>
-          {i === 1 && <HeldWeapon />}
+          {i === 1 && weapon && <HeldWeapon />}
         </group>
       ))}
       {/* big head */}

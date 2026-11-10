@@ -1,16 +1,20 @@
 "use client";
 
-import { Suspense, useEffect } from "react";
-import { Canvas } from "@react-three/fiber";
+import { Suspense, useEffect, useRef } from "react";
+import { Canvas, useFrame } from "@react-three/fiber";
+import * as THREE from "three";
 import { AdaptiveDpr, PerformanceMonitor, Preload } from "@react-three/drei";
 import { useState } from "react";
-import { useGame } from "../store";
+import { player, useGame } from "../store";
+import { City, Portal } from "../city/City";
 import { Island } from "./Island";
 import { Nature } from "./Nature";
 import { Landmarks } from "./Landmarks";
 import { Player } from "./Player";
 import { ZoneRings } from "./ZoneRings";
 import { Combat } from "../combat/Combat";
+import { NpcEldad } from "../npc/NpcEldad";
+import { Ghosts } from "../social/Ghosts";
 
 const SKY = "#7fd6f5";
 
@@ -30,20 +34,7 @@ export default function Scene() {
       <fog attach="fog" args={[SKY, 55, 110]} />
 
       <hemisphereLight args={["#fff6e6", "#6aa0d8", 1.25]} />
-      <directionalLight
-        position={[14, 26, 12]}
-        intensity={2.2}
-        color="#fff1d6"
-        castShadow
-        shadow-mapSize={[2048, 2048]}
-        shadow-camera-left={-30}
-        shadow-camera-right={30}
-        shadow-camera-top={30}
-        shadow-camera-bottom={-30}
-        shadow-camera-far={80}
-        shadow-bias={-0.0005}
-        shadow-normalBias={0.04}
-      />
+      <Sun />
 
       <Suspense fallback={null}>
         <Island />
@@ -52,10 +43,42 @@ export default function Scene() {
         <ZoneRings />
         <Player />
         <Combat />
+        <NpcEldad />
+        <Ghosts />
+        <City />
+        <Portal to="city" />
         <Ready />
         <Preload all />
       </Suspense>
     </Canvas>
+  );
+}
+
+/** Directional light that follows the player, so shadows work on both islands. */
+function Sun() {
+  const light = useRef<THREE.DirectionalLight>(null);
+  useFrame(() => {
+    const l = light.current;
+    if (!l) return;
+    l.position.set(player.x + 14, 26, player.z + 12);
+    l.target.position.set(player.x, 0, player.z);
+    l.target.updateMatrixWorld();
+  });
+  return (
+    <directionalLight
+      ref={light}
+      intensity={2.2}
+      color="#fff1d6"
+      castShadow
+      shadow-mapSize={[2048, 2048]}
+      shadow-camera-left={-26}
+      shadow-camera-right={26}
+      shadow-camera-top={26}
+      shadow-camera-bottom={-26}
+      shadow-camera-far={80}
+      shadow-bias={-0.0005}
+      shadow-normalBias={0.04}
+    />
   );
 }
 

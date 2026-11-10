@@ -175,7 +175,13 @@ function formatDocs(docs: Document[]): string {
 
 export async function POST(req: Request) {
   try {
-    const { prompt: input, stream: useStream = true } = await req.json();
+    const {
+      prompt: input,
+      stream: useStream = true,
+      persona,
+      history = [],
+    } = await req.json();
+    const isNpc = persona === "npc";
 
     if (!input || typeof input !== "string") {
       return Response.json({ error: "Invalid prompt" }, { status: 400 });
@@ -199,8 +205,18 @@ export async function POST(req: Request) {
     const context = formatDocs(relevantDocs);
     const sources = [...new Set(relevantDocs.map((doc) => doc.metadata.source))];
 
+    // The in-game "digital twin" speaks as Eldad, briefly, in the visitor's language.
+    const npcPrompt = `You are the AI digital twin of Eldad Yikne, standing on his portfolio island game.
+Speak in FIRST PERSON as Eldad ("I built...", "At Codere I...").
+Always answer in the same language the visitor wrote in (Hebrew → Hebrew, English → English).
+Keep answers short and lively: 2-4 sentences, no markdown, no bullet lists.
+Use only the facts below. If something isn't covered, say you'd love to talk about it in person and suggest the pier (contact).
+
+Facts about me:
+{context}`;
+
     // Create the prompt template
-    const systemPrompt = `אתה עוזר אישי חכם של אלדד יקנה (Eldad Yikne).
+    const systemPrompt = isNpc ? npcPrompt : `אתה עוזר אישי חכם של אלדד יקנה (Eldad Yikne).
 אתה עונה על שאלות בעברית בלבד.
 יש לך גישה למידע מקבצי PDF, פרויקטים, כישורים וניסיון תעסוקתי של אלדד.
 
@@ -217,8 +233,16 @@ export async function POST(req: Request) {
 - אם שואלים על כישורים - ציין את רמת המיומנות
 - אם שואלים על ניסיון - תן פרטים על החברות, התפקידים וההישגים`;
 
+    // A few previous turns keep follow-up questions ("and what stack?") coherent.
+    const past = (Array.isArray(history) ? history : [])
+      .slice(-6)
+      .filter((m: { role?: string; content?: string }) => typeof m?.content === "string")
+      .map((m: { role: string; content: string }) =>
+        [m.role === "assistant" ? "ai" : "human", m.content.replace(/[{}]/g, "")] as ["ai" | "human", string]
+      );
     const prompt = ChatPromptTemplate.fromMessages([
       ["system", systemPrompt],
+      ...past,
       ["human", "{input}"],
     ]);
 

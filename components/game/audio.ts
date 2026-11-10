@@ -193,6 +193,10 @@ export function sfx(name: string) {
       [262, 392, 523].forEach((f, i) => tone("sawtooth", f, f, { d: 0.18, peak: 0.12 }, sfxBus, i * 0.12));
       noise("lowpass", 400, 80, { d: 0.5, peak: 0.5 }, 1, sfxBus, 0.36);
       break;
+    case "warp":
+      tone("sine", 200, 1600, { a: 0.02, d: 0.45, peak: 0.35 });
+      noise("bandpass", 400, 5000, { a: 0.05, d: 0.5, peak: 0.3 }, 4);
+      break;
     case "click":
       tone("sine", 900, 600, { d: 0.04, peak: 0.2 });
       break;

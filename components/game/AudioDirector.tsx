@@ -5,6 +5,7 @@ import { preloadVoices, setBattleMusic, sfx, unlockAudio, voice } from "./audio"
 import { useGame } from "./store";
 import { useCombat } from "./combat/state";
 import { ZONES } from "./world";
+import { useCity } from "./city/state";
 
 const VOICES = [
   "welcome", "complete", "mission_start", "wave_1", "wave_2", "wave_3", "wave_4", "final_wave", "wave_clear",
@@ -59,7 +60,10 @@ export function AudioDirector() {
       }
     });
 
+    const offCity = useCity.subscribe((s, p) => s.warpAt !== p.warpAt && sfx("warp"));
+
     return () => {
+      offCity();
       window.removeEventListener("pointerdown", unlock);
       window.removeEventListener("keydown", unlock);
       offGame();
