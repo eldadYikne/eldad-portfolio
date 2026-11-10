@@ -1,0 +1,318 @@
+"use client";
+
+import { useEffect, useMemo, useRef } from "react";
+import { useFrame, useThree } from "@react-three/fiber";
+import { Html, Outlines } from "@react-three/drei";
+import * as THREE from "three";
+import { COLLIDERS, PALETTE, PLAYER_LEVEL, ZONES, insideIsland } from "../world";
+import { toon } from "../toon";
+import { input, player, useGame } from "../store";
+
+const SPEED = 6.5;
+const RADIUS = 0.45;
+const CAM_OFFSET = new THREE.Vector3(0, 23, 17);
+
+const move = new THREE.Vector3();
+const camTarget = new THREE.Vector3();
+const lookAt = new THREE.Vector3();
+const INTRO_CAM = new THREE.Vector3(0, 46, 34);
+const ORIGIN = new THREE.Vector3(0, 0, 0);
+
+/**
+ * The player: an original chunky avatar (big head, hoodie, laptop backpack)
+ * with a procedural walk cycle, circle-vs-circle collisions, zone triggers
+ * and a follow camera.
+ */
+export function Player() {
+  const root = useRef<THREE.Group>(null);
+  const body = useRef<THREE.Group>(null);
+  const legL = useRef<THREE.Group>(null);
+  const legR = useRef<THREE.Group>(null);
+  const armL = useRef<THREE.Group>(null);
+  const armR = useRef<THREE.Group>(null);
+  const ring = useRef<THREE.Mesh>(null);
+  const marker = useRef<THREE.Mesh>(null);
+  const phase = useRef(0);
+  const intro = useRef(0);
+  const camera = useThree((s) => s.camera);
+
+  useEffect(() => {
+    // Opening shot: the whole island from high above.
+    camera.position.set(0, 46, 34);
+    camera.lookAt(0, 0, 0);
+  }, [camera]);
+
+  useFrame((state, dt) => {
+    dt = Math.min(dt, 1 / 30);
+    const { started, start, enter } = useGame.getState();
+    const t = state.clock.elapsedTime;
+
+    /* ---- intro: swoop down, drop the player in ---- */
+    if (!started) {
+      intro.current = Math.min(1, intro.current + dt / 2.6);
+      if (intro.current >= 1) start();
+    }
+    const e = 1 - Math.pow(1 - intro.current, 3);
+    const drop = Math.max(0, 1 - Math.max(0, intro.current - 0.45) / 0.4); // 1 → 0
+    const bounce = intro.current > 0.85 ? Math.sin((intro.current - 0.85) * 40) * (1 - intro.current) * 0.6 : 0;
+
+    /* ---- input → desired direction ---- */
+    move.set(0, 0, 0);
+    if (started) {
+      const k = input.keys;
+      if (k.has("w") || k.has("arrowup")) move.z -= 1;
+      if (k.has("s") || k.has("arrowdown")) move.z += 1;
+      if (k.has("a") || k.has("arrowleft")) move.x -= 1;
+      if (k.has("d") || k.has("arrowright")) move.x += 1;
+      move.x += input.stick.x;
+      move.z += input.stick.y;
+      if (move.lengthSq() > 0.01) input.target = null;
+      else if (input.target) {
+        move.set(input.target.x - player.x, 0, input.target.z - player.z);
+        if (move.length() < 0.25) {
+          input.target = null;
+          move.set(0, 0, 0);
+        }
+      }
+    }
+    const len = Math.min(1, move.length());
+    player.moving = len > 0.05;
+
+    if (player.moving) {
+      move.normalize().multiplyScalar(SPEED * len * dt);
+      let nx = player.x + move.x;
+      let nz = player.z + move.z;
+      // Push out of landmarks, trees and rocks.
+      for (const c of COLLIDERS) {
+        const dx = nx - c.x;
+        const dz = nz - c.z;
+        const d = Math.hypot(dx, dz);
+        const min = c.r + RADIUS;
+        if (d < min && d > 1e-4) {
+          nx = c.x + (dx / d) * min;
+          nz = c.z + (dz / d) * min;
+        }
+      }
+      // Stay on the island.
+      if (insideIsland(nx, nz, 1.2)) {
+        player.x = nx;
+        player.z = nz;
+      } else input.target = null;
+      const want = Math.atan2(move.x, move.z);
+      let diff = want - player.heading;
+      diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+      player.heading += diff * Math.min(1, dt * 14);
+    }
+
+    /* ---- zone triggers ---- */
+    if (started) {
+      let inside: (typeof ZONES)[number]["id"] | null = null;
+      for (const z of ZONES) if (Math.hypot(player.x - z.ring[0], player.z - z.ring[1]) < z.ringR) inside = z.id;
+      enter(inside);
+    }
+
+    /* ---- pose ---- */
+    if (root.current) {
+      root.current.position.set(player.x, drop * 14 + bounce, player.z);
+      root.current.rotation.y = player.heading;
+    }
+    const speedK = player.moving ? 1 : 0;
+    phase.current += dt * (player.moving ? 13 : 2);
+    const s = Math.sin(phase.current);
+    const swing = s * 0.85 * speedK;
+    if (legL.current) legL.current.rotation.x = swing;
+    if (legR.current) legR.current.rotation.x = -swing;
+    if (armL.current) armL.current.rotation.x = -swing * 0.9;
+    if (armR.current) armR.current.rotation.x = swing * 0.9;
+    if (body.current) {
+      const hop = player.moving ? Math.abs(Math.cos(phase.current)) * 0.12 : Math.sin(t * 2) * 0.02;
+      body.current.position.y = hop;
+      // Squash & stretch on landing and on each step.
+      const sq = player.moving ? 1 + Math.cos(phase.current * 2) * 0.03 : 1;
+      body.current.scale.set(1 / Math.sqrt(sq), sq, 1 / Math.sqrt(sq));
+      body.current.rotation.x = player.moving ? 0.12 : 0;
+    }
+    if (ring.current) {
+      ring.current.position.set(player.x, 0.04, player.z);
+      ring.current.rotation.z = t * 0.8;
+      ring.current.visible = drop < 0.05;
+    }
+    if (marker.current) {
+      marker.current.visible = !!input.target;
+      if (input.target) {
+        marker.current.position.set(input.target.x, 0.05, input.target.z);
+        marker.current.scale.setScalar(0.8 + Math.sin(t * 8) * 0.12);
+      }
+    }
+
+    /* ---- camera ---- */
+    camTarget.set(player.x, 0, player.z).add(CAM_OFFSET);
+    // Narrow / portrait screens: pull back so the island stays readable.
+    const aspect = state.size.width / state.size.height;
+    if (aspect < 1) {
+      camTarget.y += (1 - aspect) * 14;
+      camTarget.z += (1 - aspect) * 10;
+    }
+    if (!started) camTarget.lerpVectors(INTRO_CAM, camTarget, e);
+    camera.position.lerp(camTarget, started ? 1 - Math.exp(-5 * dt) : 1);
+    lookAt.set(player.x, 0.8, player.z - 1);
+    if (!started) lookAt.lerpVectors(ORIGIN, lookAt, e);
+    camera.lookAt(lookAt);
+  });
+
+  return (
+    <>
+      <group ref={root}>
+        <group ref={body}>
+          <Avatar legL={legL} legR={legR} armL={armL} armR={armR} />
+        </group>
+        <Html position={[0, 2.55, 0]} center zIndexRange={[20, 10]} pointerEvents="none">
+          <div className="nameplate">
+            <span className="nameplate-lvl">{PLAYER_LEVEL}</span>
+            <span className="nameplate-name">Eldad</span>
+          </div>
+        </Html>
+      </group>
+      {/* team ring under the player */}
+      <mesh ref={ring} rotation-x={-Math.PI / 2}>
+        <ringGeometry args={[0.62, 0.78, 32, 1, 0, Math.PI * 1.6]} />
+        <meshBasicMaterial color="#41d1ff" transparent opacity={0.9} />
+      </mesh>
+      {/* click-to-move marker */}
+      <mesh ref={marker} rotation-x={-Math.PI / 2} visible={false}>
+        <ringGeometry args={[0.3, 0.42, 24]} />
+        <meshBasicMaterial color={PALETTE.white} transparent opacity={0.85} />
+      </mesh>
+      <Dust />
+    </>
+  );
+}
+
+type LimbRef = React.RefObject<THREE.Group | null>;
+
+function Avatar({ legL, legR, armL, armR }: { legL: LimbRef; legR: LimbRef; armL: LimbRef; armR: LimbRef }) {
+  const ink = <Outlines thickness={0.03} color={PALETTE.outline} />;
+  const skin = toon("#e0a27c");
+  const hoodie = toon(PALETTE.coral);
+  const pants = toon(PALETTE.navy);
+  return (
+    <group>
+      {/* legs */}
+      {[
+        [legL, -0.17],
+        [legR, 0.17],
+      ].map(([ref, x], i) => (
+        <group key={i} ref={ref as LimbRef} position={[x as number, 0.62, 0]}>
+          <mesh position={[0, -0.27, 0]} material={pants} castShadow>
+            <capsuleGeometry args={[0.13, 0.32, 4, 8]} />
+            {ink}
+          </mesh>
+          <mesh position={[0, -0.55, 0.06]} material={toon(PALETTE.white)} castShadow>
+            <boxGeometry args={[0.24, 0.14, 0.36]} />
+            {ink}
+          </mesh>
+        </group>
+      ))}
+      {/* torso: hoodie */}
+      <mesh position={[0, 0.98, 0]} material={hoodie} castShadow>
+        <capsuleGeometry args={[0.36, 0.34, 6, 14]} />
+        {ink}
+      </mesh>
+      <mesh position={[0, 0.9, 0.33]} material={toon("#e0574c")}>
+        <boxGeometry args={[0.34, 0.16, 0.06]} />
+      </mesh>
+      {/* laptop backpack */}
+      <mesh position={[0, 1.02, -0.38]} material={toon(PALETTE.navy)} castShadow>
+        <boxGeometry args={[0.5, 0.56, 0.2]} />
+        {ink}
+      </mesh>
+      <mesh position={[0, 1.08, -0.485]} material={toon("#41d1ff", { emissive: "#41d1ff", emissiveIntensity: 0.5 })}>
+        <boxGeometry args={[0.16, 0.16, 0.02]} />
+      </mesh>
+      {/* arms */}
+      {[
+        [armL, -0.47],
+        [armR, 0.47],
+      ].map(([ref, x], i) => (
+        <group key={i} ref={ref as LimbRef} position={[x as number, 1.2, 0]}>
+          <mesh position={[0, -0.25, 0]} material={hoodie} castShadow>
+            <capsuleGeometry args={[0.11, 0.3, 4, 8]} />
+            {ink}
+          </mesh>
+          <mesh position={[0, -0.5, 0]} material={skin}>
+            <sphereGeometry args={[0.11, 10, 10]} />
+            {ink}
+          </mesh>
+        </group>
+      ))}
+      {/* big head */}
+      <group position={[0, 1.78, 0]}>
+        <mesh material={skin} castShadow>
+          <sphereGeometry args={[0.44, 24, 20]} />
+          {ink}
+        </mesh>
+        {/* hair */}
+        <mesh position={[0, 0.16, -0.04]} scale={[1.04, 0.72, 1.04]} material={toon("#2b1b14")}>
+          <sphereGeometry args={[0.44, 20, 14, 0, Math.PI * 2, 0, Math.PI / 2]} />
+        </mesh>
+        {/* eyes */}
+        {[-0.15, 0.15].map((x) => (
+          <mesh key={x} position={[x, 0.02, 0.4]} material={toon(PALETTE.outline)}>
+            <sphereGeometry args={[0.055, 10, 10]} />
+          </mesh>
+        ))}
+        {/* glasses */}
+        {[-0.15, 0.15].map((x) => (
+          <mesh key={`g${x}`} position={[x, 0.02, 0.42]} material={toon(PALETTE.outline)}>
+            <torusGeometry args={[0.11, 0.018, 6, 16]} />
+          </mesh>
+        ))}
+        <mesh position={[0, 0.02, 0.43]} material={toon(PALETTE.outline)}>
+          <boxGeometry args={[0.1, 0.02, 0.02]} />
+        </mesh>
+        {/* smile */}
+        <mesh position={[0, -0.16, 0.4]} rotation={[0, 0, Math.PI]} material={toon(PALETTE.outline)}>
+          <torusGeometry args={[0.08, 0.016, 6, 12, Math.PI]} />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
+/** Little dust puffs kicked up while running. */
+function Dust() {
+  const COUNT = 18;
+  const ref = useRef<THREE.InstancedMesh>(null);
+  const puffs = useMemo(() => Array.from({ length: COUNT }, () => ({ x: 0, z: 0, t: 1 })), []);
+  const next = useRef(0);
+  const timer = useRef(0);
+  const dummy = useMemo(() => new THREE.Object3D(), []);
+
+  useFrame((_, dt) => {
+    const mesh = ref.current;
+    if (!mesh) return;
+    timer.current -= dt;
+    if (player.moving && timer.current <= 0) {
+      timer.current = 0.09;
+      const p = puffs[next.current++ % COUNT];
+      p.x = player.x - Math.sin(player.heading) * 0.35 + (Math.random() - 0.5) * 0.3;
+      p.z = player.z - Math.cos(player.heading) * 0.35 + (Math.random() - 0.5) * 0.3;
+      p.t = 0;
+    }
+    puffs.forEach((p, i) => {
+      p.t = Math.min(1, p.t + dt * 1.8);
+      const s = p.t >= 1 ? 0 : (0.15 + p.t * 0.3) * (1 - p.t);
+      dummy.position.set(p.x, 0.12 + p.t * 0.35, p.z);
+      dummy.scale.setScalar(s);
+      dummy.updateMatrix();
+      mesh.setMatrixAt(i, dummy.matrix);
+    });
+    mesh.instanceMatrix.needsUpdate = true;
+  });
+
+  return (
+    <instancedMesh ref={ref} args={[undefined, toon("#fff4e0"), COUNT]} frustumCulled={false}>
+      <icosahedronGeometry args={[1, 0]} />
+    </instancedMesh>
+  );
+}

@@ -1,11 +1,11 @@
-import { ImmersiveHome } from "@/components/three/ImmersiveHome";
+import { GameHome } from "@/components/game/GameHome";
 import { education, experience, profile, projects, skills } from "@/content/portfolio";
 
 export default function HomePage() {
   return (
-    <ImmersiveHome>
+    <GameHome>
       <PortfolioContent />
-    </ImmersiveHome>
+    </GameHome>
   );
 }
 
