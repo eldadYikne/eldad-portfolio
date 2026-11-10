@@ -68,6 +68,8 @@ function layout(repos: Repo[]): Building[] {
     const w = 1.6 + Math.min(0.6, repo.stars * 0.15);
     return {
       ...repo,
+      // Cached responses from before stacks were added won't have the field.
+      stack: Array.isArray(repo.stack) ? repo.stack : [],
       x: cells[i].x,
       z: cells[i].z,
       w,

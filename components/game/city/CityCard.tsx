@@ -22,7 +22,7 @@ export function CityCard() {
         <span>🕒 {pushed.toLocaleDateString(undefined, { month: "short", year: "numeric" })}</span>
         {b.fresh && <span>🔥 active</span>}
       </div>
-      {b.stack.length > 0 && (
+      {b.stack?.length > 0 && (
         <>
           <span className="card-label">Stack</span>
           <div className="chips stack">
