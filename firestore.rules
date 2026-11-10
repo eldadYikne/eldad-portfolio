@@ -1,0 +1,38 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAdmin() {
+      return request.auth != null && request.auth.uid == "rxWTi5p0bHbTOa7tVKmo7S0J4fF3";
+    }
+
+    match /projects/{projectId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /workExperience/{experienceId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /skills/{skillId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Live "ghosts" on the island: anonymous, tightly-shaped presence docs.
+    match /presence/{sessionId} {
+      allow read: if true;
+      allow create, update: if sessionId.size() <= 16
+        && request.resource.data.keys().hasOnly(['x', 'z', 'h', 'moving', 'country', 'at'])
+        && request.resource.data.x is number && request.resource.data.x > -100 && request.resource.data.x < 100
+        && request.resource.data.z is number && request.resource.data.z > -100 && request.resource.data.z < 100
+        && request.resource.data.h is number
+        && request.resource.data.moving is bool
+        && request.resource.data.country is string && request.resource.data.country.size() <= 2
+        && request.resource.data.at is int;
+      allow delete: if true;
+    }
+  }
+}
