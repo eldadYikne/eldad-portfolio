@@ -249,7 +249,7 @@
 /* ---------- joystick (touch only) ---------- */
 .joystick {
   position: absolute;
-  right: 28px;
+  left: 28px;
   bottom: 40px;
   width: 120px;
   height: 120px;
@@ -507,4 +507,31 @@
 
 @media (prefers-reduced-motion: reduce) {
   .card, .card li, .chips span, .card-icon, .reward, .loader-logo { animation: none; }
+}
+
+/* aim stick (right) in missions */
+.joystick.aim { left: auto; right: 28px; background: rgba(239, 68, 68, 0.35); }
+.joystick.aim .joystick-knob { background: #f87171; }
+@media (pointer: coarse) {
+  .hud.mission .weapon-slot { right: 24px; left: auto; bottom: 180px; }
+}
+.game-root.aiming .game-canvas { cursor: crosshair; }
+
+.mute {
+  position: absolute;
+  top: 118px;
+  left: 16px;
+  width: 42px;
+  height: 42px;
+  border: 3px solid var(--ink);
+  border-radius: 12px;
+  background: var(--paper);
+  font-size: 20px;
+  box-shadow: 0 4px 0 var(--ink);
+  cursor: pointer;
+}
+.hud.mission .mute { top: 160px; }
+@media (max-width: 820px) {
+  .mute { top: 84px; }
+  .hud.mission .mute { top: 120px; }
 }

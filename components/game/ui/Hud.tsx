@@ -5,6 +5,7 @@ import { NESTS, PLAYER_LEVEL, ZONES, islandRadius, zoneById } from "../world";
 import { BOSSES } from "../combat/defs";
 import { useCombat } from "../combat/state";
 import { MissionHud } from "./MissionHud";
+import { isMuted, onMute, setMuted } from "../audio";
 import { input, player, useGame } from "../store";
 import { ZoneCard } from "./ZoneCard";
 
@@ -44,15 +45,17 @@ export function Hud() {
         <Quests />
       </div>
 
+      <MuteButton />
       <RewardPop />
       {!inMission && <ZoneCard />}
       <MissionHud />
-      <Joystick />
+      <Joystick mode="move" />
+      {inMission && <Joystick mode="aim" />}
       <p className="hint">
         <kbd>W</kbd>
         <kbd>A</kbd>
         <kbd>S</kbd>
-        <kbd>D</kbd> or click the map to walk
+        <kbd>D</kbd> or click the map to walk · 🔫 missions: aim with the mouse, hold click to fire
       </p>
     </div>
   );
@@ -170,8 +173,24 @@ function RewardPop() {
   );
 }
 
-/** Touch joystick, shown only on coarse-pointer devices. */
-function Joystick() {
+function MuteButton() {
+  const [m, setM] = useState(false);
+  useEffect(() => {
+    setM(isMuted());
+    return onMute(setM);
+  }, []);
+  return (
+    <button className="mute" onClick={() => setMuted(!m)} aria-label={m ? "Unmute sound" : "Mute sound"} aria-pressed={m}>
+      {m ? "🔇" : "🔊"}
+    </button>
+  );
+}
+
+/**
+ * Touch sticks, shown only on coarse-pointer devices: the left one moves,
+ * the right one (in missions) aims and fires while held.
+ */
+function Joystick({ mode }: { mode: "move" | "aim" }) {
   const base = useRef<HTMLDivElement>(null);
   const knob = useRef<HTMLDivElement>(null);
   const [touch, setTouch] = useState(false);
@@ -187,20 +206,30 @@ function Joystick() {
       x /= l;
       y /= l;
     }
-    input.stick.x = x;
-    input.stick.y = y;
+    if (mode === "move") {
+      input.stick.x = x;
+      input.stick.y = y;
+    } else {
+      Object.assign(input.aimStick, { x, y, active: true });
+      input.firing = Math.hypot(x, y) > 0.3;
+    }
     knob.current!.style.transform = `translate(${x * 34}px, ${y * 34}px)`;
   };
   const end = () => {
-    input.stick.x = 0;
-    input.stick.y = 0;
+    if (mode === "move") {
+      input.stick.x = 0;
+      input.stick.y = 0;
+    } else {
+      Object.assign(input.aimStick, { x: 0, y: 0, active: false });
+      input.firing = false;
+    }
     knob.current!.style.transform = "";
   };
 
   return (
     <div
       ref={base}
-      className="joystick"
+      className={`joystick ${mode}`}
       onPointerDown={(e) => {
         e.currentTarget.setPointerCapture(e.pointerId);
         update(e);

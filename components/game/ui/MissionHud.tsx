@@ -30,7 +30,7 @@ export function MissionHud() {
         <div className="mission-prompt-body">
           <span className="mission-kicker">{done ? "Defeated · play again?" : `Boss mission · ${"★".repeat(b.tier + 1)}`}</span>
           <h3>{b.name}</h3>
-          <p>{b.blurb} 5 waves, a new weapon every wave, and the boss joins in wave 5.</p>
+          <p>{b.blurb} 5 waves, a new weapon every wave, and the boss joins in wave 5. Move with WASD, aim with the mouse, hold click (or Space) to fire.</p>
         </div>
         <button onClick={() => useCombat.getState().start(near)}>
           Start <kbd>Enter</kbd>

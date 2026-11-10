@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useRef } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useEffect, useMemo, useRef } from "react";
+import { useFrame, useThree } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
-import { NESTS, insideIsland, nestById, type BossId, type Nest } from "../world";
-import { player } from "../store";
+import { COLLIDERS, NESTS, insideIsland, nestById, type BossId, type Nest } from "../world";
+import { input, player } from "../store";
+import { sfx } from "../audio";
 import { toon } from "../toon";
 import { BOSSES, PLAYER_MAX_HP, WAVES, WAVE_WEAPONS, WEAPONS, waveStats } from "./defs";
 import { ENEMY_POOL, sim, useCombat, type Enemy, type Shot } from "./state";
@@ -14,6 +15,16 @@ import { Monster, animateMonster, flashMonster, newParts } from "./Monsters";
 const ENEMY_SCALE = 0.62;
 const BOSS_SCALE = 2.4;
 const tmp = new THREE.Object3D();
+const ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+const hitPoint = new THREE.Vector3();
+/** Unit-length strip starting at the origin and pointing along +y. */
+const AIM_STRIP = new THREE.PlaneGeometry(0.35, 1).translate(0, 0.5, 0);
+
+/** Open ground: on the island and clear of buildings, trees and rocks. */
+function isOpen(x: number, z: number, pad: number) {
+  if (!insideIsland(x, z, 1.5)) return false;
+  return !COLLIDERS.some((c) => Math.hypot(x - c.x, z - c.z) < c.r + pad);
+}
 
 /* ================================================================== *
  *  Simulation helpers                                                 *
@@ -23,15 +34,16 @@ function free<T extends { active: boolean }>(list: T[]) {
   return list.find((x) => !x.active);
 }
 
-function spawnPoint(minR: number, maxR: number): [number, number] {
-  for (let i = 0; i < 20; i++) {
+function spawnPoint(minR: number, maxR: number, pad = 0.8): [number, number] {
+  for (let i = 0; i < 40; i++) {
     const a = Math.random() * Math.PI * 2;
     const r = minR + Math.random() * (maxR - minR);
     const x = player.x + Math.cos(a) * r;
     const z = player.z + Math.sin(a) * r;
-    if (insideIsland(x, z, 1.5)) return [x, z];
+    if (isOpen(x, z, pad)) return [x, z];
   }
-  return [player.x * 0.6, player.z * 0.6];
+  // Fallback: back toward the centre of the island, which is always open.
+  return [player.x * 0.5, player.z * 0.5];
 }
 
 function spawnEnemy(stats: ReturnType<typeof waveStats>, at?: [number, number]) {
@@ -71,6 +83,7 @@ function damageEnemy(i: number, dmg: number, fromX: number, fromZ: number) {
   if (!e.active || e.dying > 0) return;
   e.hp -= dmg;
   e.flash = 1;
+  sfx("hit");
   const dx = e.x - fromX;
   const dz = e.z - fromZ;
   const d = Math.hypot(dx, dz) || 1;
@@ -80,6 +93,7 @@ function damageEnemy(i: number, dmg: number, fromX: number, fromZ: number) {
   if (e.boss) useCombat.getState().patch({ bossHp: Math.max(0, e.hp / e.maxHp) });
   if (e.hp <= 0) {
     e.dying = 0.0001;
+    sfx(e.boss ? "boss_die" : "pop");
     const mission = useCombat.getState().mission;
     burst(e.x, e.z, mission ? BOSSES[mission.boss].color : "#fff", e.boss ? 3 : 1);
     if (!e.boss && Math.random() < 0.1) {
@@ -92,6 +106,7 @@ function damageEnemy(i: number, dmg: number, fromX: number, fromZ: number) {
 function explode(x: number, z: number, r: number, dmg: number) {
   const b = free(sim.blasts);
   if (b) Object.assign(b, { active: true, x, z, t: 0, r, color: "#ffb347" });
+  sfx("boom");
   sim.enemies.forEach((e, i) => {
     if (e.active && Math.hypot(e.x - x, e.z - z) < r + e.r) damageEnemy(i, dmg, x, z);
   });
@@ -103,6 +118,7 @@ function hurtPlayer(dmg: number, fromX: number, fromZ: number) {
   if (!st.mission || st.mission.phase !== "fight") return;
   sim.hp = Math.max(0, sim.hp - dmg);
   sim.invuln = 0.5;
+  sfx("hurt");
   const dx = player.x - fromX;
   const dz = player.z - fromZ;
   const d = Math.hypot(dx, dz) || 1;
@@ -131,7 +147,7 @@ function startWave(wave: number) {
   // A new weapon crate drops somewhere nearby: go grab it.
   const p = free(sim.pickups);
   if (p) {
-    const [x, z] = spawnPoint(3, 4.5);
+    const [x, z] = spawnPoint(3, 5, 1.4);
     Object.assign(p, { active: true, kind: "weapon", weapon: WAVE_WEAPONS[wave - 1], x, z, t: 0 });
   }
   let total = ws.count;
@@ -155,6 +171,38 @@ function startWave(wave: number) {
 export function Combat() {
   const mission = useCombat((s) => s.mission);
   const kind = mission?.boss;
+  const { camera, raycaster, gl } = useThree();
+
+  // Hold the mouse button (or Space) to fire. Only presses on the canvas count,
+  // so clicking HUD buttons never shoots.
+  useEffect(() => {
+    const el = gl.domElement;
+    const down = (e: PointerEvent) => {
+      if (e.button === 0 && e.pointerType === "mouse") input.firing = true;
+    };
+    const up = (e: PointerEvent) => {
+      if (e.pointerType === "mouse") input.firing = false;
+    };
+    const key = (e: KeyboardEvent) => {
+      if (e.code === "Space" && !(e.target as HTMLElement)?.closest("input, textarea")) {
+        e.preventDefault();
+        input.firing = e.type === "keydown";
+      }
+    };
+    const blur = () => (input.firing = false);
+    el.addEventListener("pointerdown", down);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("keydown", key);
+    window.addEventListener("keyup", key);
+    window.addEventListener("blur", blur);
+    return () => {
+      el.removeEventListener("pointerdown", down);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("keydown", key);
+      window.removeEventListener("keyup", key);
+      window.removeEventListener("blur", blur);
+    };
+  }, [gl]);
 
   useFrame((state, dt) => {
     dt = Math.min(dt, 1 / 30);
@@ -200,50 +248,46 @@ export function Combat() {
       }
     }
 
-    /* ---- player auto-attack ---- */
+    /* ---- player aim (mouse / aim stick) & attack ---- */
     const weapon = WEAPONS[st.weapon];
     sim.attackCd -= dt;
-    if (fighting) {
-      let best = -1;
-      let bestD = Infinity;
-      sim.enemies.forEach((e, i) => {
-        if (!e.active || e.dying > 0 || e.age < 0.4) return;
-        const d = Math.hypot(e.x - player.x, e.z - player.z) - e.r;
-        if (d < weapon.range && d < bestD) {
-          bestD = d;
-          best = i;
-        }
-      });
-      if (best >= 0 && sim.attackCd <= 0) {
-        const t = sim.enemies[best];
-        const aim = Math.atan2(t.x - player.x, t.z - player.z);
-        player.aimHeading = aim;
-        player.aimT = 0.4;
-        sim.attackCd = weapon.cooldown;
-        sim.recoil = 1;
-        const hx = player.x + Math.sin(aim) * 0.6;
-        const hz = player.z + Math.cos(aim) * 0.6;
-        if (weapon.kind === "melee") {
-          sim.slash.t = 0;
-          sim.slash.heading = aim;
-          sim.slash.r = weapon.range;
-          sim.enemies.forEach((e, i) => {
-            if (!e.active || e.dying > 0) return;
-            const dx = e.x - player.x;
-            const dz = e.z - player.z;
-            const d = Math.hypot(dx, dz);
-            let diff = Math.atan2(dx, dz) - aim;
-            diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-            if (d < weapon.range + e.r && Math.abs(diff) < 1.25) damageEnemy(i, weapon.damage, player.x, player.z);
-          });
-        } else if (weapon.kind === "spread") {
-          for (let p = 0; p < (weapon.pellets ?? 5); p++) {
-            const a = aim + (p / ((weapon.pellets ?? 5) - 1) - 0.5) * 0.7;
-            fireShot(sim.shots, hx, hz, a, weapon.speed!, weapon.range, weapon.damage);
-          }
-        } else {
-          fireShot(sim.shots, hx, hz, aim, weapon.speed!, weapon.range, weapon.damage, !!weapon.pierce, weapon.blast ?? 0);
-        }
+    if (input.aimStick.active && Math.hypot(input.aimStick.x, input.aimStick.y) > 0.25) {
+      player.aimHeading = Math.atan2(input.aimStick.x, input.aimStick.y);
+    } else {
+      raycaster.setFromCamera(state.pointer, camera);
+      if (raycaster.ray.intersectPlane(ground, hitPoint)) {
+        input.aim.x = hitPoint.x;
+        input.aim.z = hitPoint.z;
+        input.aim.valid = true;
+        player.aimHeading = Math.atan2(hitPoint.x - player.x, hitPoint.z - player.z);
+      }
+    }
+    player.aimT = 0.2; // in a mission the avatar always faces the crosshair
+    if (fighting && input.firing && sim.attackCd <= 0) {
+      const aim = player.aimHeading;
+      sim.attackCd = weapon.cooldown;
+      sim.recoil = 1;
+      sfx(`shoot_${weapon.id}`);
+      const hx = player.x + Math.sin(aim) * 0.6;
+      const hz = player.z + Math.cos(aim) * 0.6;
+      if (weapon.kind === "melee") {
+        sim.slash.t = 0;
+        sim.slash.heading = aim;
+        sim.slash.r = weapon.range;
+        sim.enemies.forEach((e, i) => {
+          if (!e.active || e.dying > 0) return;
+          const dx = e.x - player.x;
+          const dz = e.z - player.z;
+          const d = Math.hypot(dx, dz);
+          let diff = Math.atan2(dx, dz) - aim;
+          diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+          if (d < weapon.range + e.r && Math.abs(diff) < 1.1) damageEnemy(i, weapon.damage, player.x, player.z);
+        });
+      } else if (weapon.kind === "spread") {
+        const n = weapon.pellets ?? 5;
+        for (let p = 0; p < n; p++) fireShot(sim.shots, hx, hz, aim + (p / (n - 1) - 0.5) * 0.7, weapon.speed!, weapon.range, weapon.damage);
+      } else {
+        fireShot(sim.shots, hx, hz, aim, weapon.speed!, weapon.range, weapon.damage, !!weapon.pierce, weapon.blast ?? 0);
       }
     }
 
@@ -326,6 +370,7 @@ export function Combat() {
         if (e.shootT <= 0) {
           const n = e.boss ? 3 : 1;
           for (let k = 0; k < n; k++) fireShot(sim.ink, e.x, e.z, e.heading + (k - (n - 1) / 2) * 0.3, 7, 12, e.damage * 0.8);
+          sfx("ink");
           e.shootT = e.boss ? 1.8 : 2.2 + Math.random();
         }
       }
@@ -380,10 +425,13 @@ export function Combat() {
     for (const p of sim.pickups) {
       if (!p.active) continue;
       p.t += dt;
-      if (Math.hypot(player.x - p.x, player.z - p.z) < 1.3) {
+      if (Math.hypot(player.x - p.x, player.z - p.z) < 1.7) {
         p.active = false;
-        if (p.kind === "weapon" && p.weapon) st.setWeapon(p.weapon);
-        else {
+        if (p.kind === "weapon" && p.weapon) {
+          st.setWeapon(p.weapon);
+          sfx("pickup");
+        } else {
+          sfx("heal");
           sim.hp = Math.min(PLAYER_MAX_HP, sim.hp + 25);
           st.setHp(sim.hp);
         }
@@ -642,12 +690,40 @@ function PickupSlot({ i }: { i: number }) {
 
 /** Sword slashes, rocket explosions and death pops. */
 function Effects() {
+  const aimLine = useRef<THREE.Mesh>(null);
+  const aimArc = useRef<THREE.Mesh>(null);
+  const reticle = useRef<THREE.Mesh>(null);
   const slash = useRef<THREE.Mesh>(null);
   const slashMat = useMemo(() => new THREE.MeshBasicMaterial({ color: "#ffffff", transparent: true, depthWrite: false, side: THREE.DoubleSide }), []);
   const blasts = useRef<(THREE.Mesh | null)[]>([]);
   const bursts = useRef<(THREE.Mesh | null)[]>([]);
 
-  useFrame(() => {
+  useFrame((state) => {
+    // Aim guide on the ground, like a mobile brawler: a strip for guns, an arc for melee.
+    const st = useCombat.getState();
+    const show = !!st.mission && (st.mission.phase === "fight" || st.mission.phase === "intro");
+    const w = WEAPONS[st.weapon];
+    const melee = w.kind === "melee";
+    const firing = input.firing ? 1 : 0.6;
+    if (aimLine.current) {
+      aimLine.current.visible = show && !melee;
+      aimLine.current.position.set(player.x, 0.06, player.z);
+      aimLine.current.rotation.set(-Math.PI / 2, 0, player.aimHeading + Math.PI);
+      aimLine.current.scale.set(w.kind === "spread" ? 2.4 : 1, w.range, 1);
+      (aimLine.current.material as THREE.MeshBasicMaterial).opacity = 0.32 * firing;
+    }
+    if (aimArc.current) {
+      aimArc.current.visible = show && melee;
+      aimArc.current.position.set(player.x, 0.06, player.z);
+      aimArc.current.rotation.set(-Math.PI / 2, 0, player.aimHeading - Math.PI / 2 - 1.1);
+      aimArc.current.scale.setScalar(w.range);
+      (aimArc.current.material as THREE.MeshBasicMaterial).opacity = 0.3 * firing;
+    }
+    if (reticle.current) {
+      reticle.current.visible = show && input.aim.valid && !input.aimStick.active;
+      reticle.current.position.set(input.aim.x, 0.07, input.aim.z);
+      reticle.current.rotation.z = state.clock.elapsedTime * 2;
+    }
     const s = slash.current;
     if (s) {
       const k = sim.slash.t;
@@ -676,6 +752,18 @@ function Effects() {
 
   return (
     <>
+      {/* unit strip from the player forward (+y before the -90° X rotation) */}
+      <mesh ref={aimLine} visible={false} geometry={AIM_STRIP}>
+        <meshBasicMaterial color="#ffffff" transparent opacity={0.3} depthWrite={false} />
+      </mesh>
+      <mesh ref={aimArc} visible={false}>
+        <ringGeometry args={[0.5, 1, 24, 1, 0, 2.2]} />
+        <meshBasicMaterial color="#ffffff" transparent opacity={0.3} depthWrite={false} side={THREE.DoubleSide} />
+      </mesh>
+      <mesh ref={reticle} visible={false} rotation-x={-Math.PI / 2}>
+        <ringGeometry args={[0.28, 0.4, 4, 1]} />
+        <meshBasicMaterial color="#ffffff" transparent opacity={0.9} depthWrite={false} />
+      </mesh>
       <mesh ref={slash} material={slashMat} visible={false}>
         <ringGeometry args={[0.45, 1, 24, 1, 0, 2.4]} />
       </mesh>

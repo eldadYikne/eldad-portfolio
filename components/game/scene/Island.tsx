@@ -6,6 +6,7 @@ import * as THREE from "three";
 import { PALETTE, PATHS, islandRadius } from "../world";
 import { toon } from "../toon";
 import { input } from "../store";
+import { useCombat } from "../combat/state";
 
 const DEPTH = 3;
 
@@ -39,6 +40,8 @@ export function Island() {
   const onGround = (e: ThreeEvent<PointerEvent>) => {
     if (e.button !== 0) return;
     e.stopPropagation();
+    // During a mission the mouse aims and shoots; movement is WASD / stick.
+    if (useCombat.getState().mission) return;
     input.target = { x: e.point.x, z: e.point.z };
   };
 

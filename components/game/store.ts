@@ -40,6 +40,12 @@ export const input = {
   stick: { x: 0, y: 0 },
   /** click / tap destination on the ground */
   target: null as null | { x: number; z: number },
+  /** world point under the mouse cursor (ground plane) */
+  aim: { x: 0, z: 0, valid: false },
+  /** touch aim stick, -1..1 (x = right, y = down) */
+  aimStick: { x: 0, y: 0, active: false },
+  /** mouse button / Space / aim stick held */
+  firing: false,
 };
 
 export const player = {

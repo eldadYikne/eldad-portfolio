@@ -5,6 +5,8 @@ import dynamic from "next/dynamic";
 import { Lilita_One } from "next/font/google";
 import { input, useGame } from "./store";
 import { Hud } from "./ui/Hud";
+import { AudioDirector } from "./AudioDirector";
+import { useCombat } from "./combat/state";
 import "./game.css";
 
 const game = Lilita_One({ weight: "400", subsets: ["latin"], variable: "--font-game" });
@@ -21,6 +23,7 @@ const MOVE_KEYS = new Set(["w", "a", "s", "d", "arrowup", "arrowdown", "arrowlef
 export function GameHome({ children }: { children: ReactNode }) {
   const [webgl, setWebgl] = useState<boolean | null>(null);
   const ready = useGame((s) => s.ready);
+  const aiming = useCombat((s) => !!s.mission);
 
   useEffect(() => {
     try {
@@ -49,7 +52,8 @@ export function GameHome({ children }: { children: ReactNode }) {
   if (webgl === false) return <div className="game-fallback">{children}</div>;
 
   return (
-    <div className={`game-root ${game.variable}`}>
+    <div className={`game-root ${game.variable} ${aiming ? "aiming" : ""}`}>
+      <AudioDirector />
       <div className="sr-only">{children}</div>
       <div className="game-canvas">{webgl && <Scene />}</div>
       <Hud />
