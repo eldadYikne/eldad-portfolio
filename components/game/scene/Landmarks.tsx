@@ -72,7 +72,7 @@ export function Landmarks() {
   return (
     <>
       <Spawn />
-      <AsadraHQ />
+      <BrightBuildHQ />
       <Codere />
       <GoCode />
       <Giborim />
@@ -106,7 +106,7 @@ function Spawn() {
         ELDAD YIKNE
       </Text>
       <Text font={FONT_GAME} fontSize={0.2} position={[0, 1.42, 0.16]} color={PALETTE.coral} anchorX="center" anchorY="middle">
-        CTO & FULL-STACK ARCHITECT
+        TECH LEAD & FULL-STACK DEV
       </Text>
       <Part color={PALETTE.wood} position={[1.7, 2.6, 0]}>
         <cylinderGeometry args={[0.04, 0.04, 0.9, 6]} />
@@ -120,8 +120,8 @@ function Spawn() {
   );
 }
 
-/* ---------------- Asadra HQ: the CTO tower with a rocket on the roof ---------------- */
-function AsadraHQ() {
+/* ---------------- BrightBuild HQ: the tech-lead tower with a rocket on the roof ---------------- */
+function BrightBuildHQ() {
   const rocket = useRef<THREE.Group>(null);
   const beacon = useRef<THREE.Mesh>(null);
   useFrame((s) => {
@@ -141,7 +141,7 @@ function AsadraHQ() {
         </mesh>
       );
   return (
-    <Site id="asadra">
+    <Site id="brightbuild">
       <Part color={PALETTE.white} position={[0, 0.45, 0]}>
         <boxGeometry args={[3.4, 0.9, 3]} />
       </Part>
@@ -152,6 +152,9 @@ function AsadraHQ() {
       <Part color={PALETTE.white} position={[0, 4.45, 0]}>
         <boxGeometry args={[2.6, 0.5, 2.5]} />
       </Part>
+      <Text font={FONT_GAME} fontSize={0.3} position={[0, 4.45, 1.26]} color="#22b8e8" anchorX="center" anchorY="middle">
+        BRIGHTBUILD
+      </Text>
       <Part color={PALETTE.navy} position={[0.8, 5.1, -0.5]}>
         <cylinderGeometry args={[0.04, 0.04, 0.9, 6]} />
       </Part>

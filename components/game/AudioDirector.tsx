@@ -18,18 +18,22 @@ const VOICES = [
 export function AudioDirector() {
   useEffect(() => {
     let welcomed = false;
+    const welcome = () => {
+      if (welcomed) return;
+      welcomed = true;
+      setTimeout(() => voice("welcome", { interrupt: false }), 400);
+    };
     const unlock = () => {
       unlockAudio();
       preloadVoices(VOICES);
-      if (!welcomed && useGame.getState().started) {
-        welcomed = true;
-        setTimeout(() => voice("welcome", { interrupt: false }), 150);
-      }
+      if (useGame.getState().started) welcome();
     };
     window.addEventListener("pointerdown", unlock);
     window.addEventListener("keydown", unlock);
 
     const offGame = useGame.subscribe((s, p) => {
+      // Landing on the island (after PLAY / scroll) gets the guide's welcome.
+      if (s.started && !p.started) welcome();
       if (s.reward && s.reward !== p.reward) {
         sfx("xp");
         voice(s.visited.length === ZONES.length ? "complete" : `z_${s.reward.id}`);

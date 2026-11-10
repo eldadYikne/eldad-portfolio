@@ -4,15 +4,16 @@
 
 export const profile = {
   name: "Eldad Yikne",
-  title: "CTO & Full-Stack Architect",
+  title: "Tech Lead & Full-Stack Developer",
   tagline:
-    "I design and ship AI-driven products end to end: from system architecture and cloud infrastructure to pixel-perfect interfaces.",
+    "Tech Lead with 4+ years building production web apps in Angular, React and Next.js, now leading the frontend architecture of AI-powered products.",
   bio: [
-    "Full-Stack architect with hands-on depth across Next.js, React, Angular, Vue, Node.js and Python.",
-    "I build AI-powered products: OpenAI / LLM integrations, Model Context Protocol (MCP) pipelines, computer vision with OpenCV and MediaPipe.",
-    "Graduate of a 640-hour Full-Stack bootcamp, with an academic background in education, which shapes how I lead teams and design for real people.",
+    "Tech Lead at BrightBuild: frontend architecture, coding standards and reusable component libraries across Angular and React.",
+    "I build AI-driven interfaces (chat experiences, agents, automation workflows) with Claude AI, the OpenAI API and the Model Context Protocol (MCP), and use Claude Code every day.",
+    "Graduate of a 640-hour Full-Stack bootcamp, with an academic background in education, which shapes how I mentor developers and design for real people.",
   ],
   email: "eldadykn@gmail.com",
+  cv: "/Eldad-Yikne-CV.pdf",
   links: {
     github: "https://github.com/eldadYikne",
     linkedin: "https://linkedin.com/in/eldad-yikne",
@@ -32,33 +33,32 @@ export type Experience = {
 
 export const experience: Experience[] = [
   {
-    id: "asadra",
-    company: "Asadra",
-    role: "CTO & Full-Stack Architect",
-    period: "2025 — Present",
-    summary:
-      "Leading technology strategy, architecture and delivery of AI-driven products.",
+    id: "brightbuild",
+    company: "BrightBuild",
+    role: "Tech Lead",
+    period: "Feb 2026 — Present",
+    summary: "Leading frontend development of AI-powered solutions for clients.",
     highlights: [
-      "Own end-to-end system architecture, from cloud infrastructure to client apps",
-      "Build AI and automation features on top of LLM APIs",
-      "Set engineering standards, CI/CD and code review culture",
+      "Define frontend architecture, coding standards and reusable component libraries across Angular and React",
+      "Build AI-driven interfaces (chat, agents, automation workflows) with Claude AI, the OpenAI API and MCP",
+      "Mentor developers, lead code reviews and technical planning",
+      "Work with product, design and clients to turn requirements into scalable solutions",
     ],
-    stack: ["Next.js", "React", "Node.js", "Python", "AWS", "TypeScript", "OpenAI"],
+    stack: ["Angular", "React", "Next.js", "TypeScript", "Claude AI", "OpenAI", "MCP"],
     color: "#22d3ee",
   },
   {
     id: "codere",
     company: "Codere Online",
     role: "Full-Stack Developer",
-    period: "Dec 2024 — Present",
-    summary:
-      "High-performance, scalable web applications for the online gaming industry.",
+    period: "Dec 2024 — Jan 2026",
+    summary: "High-traffic web applications for a high-scale online gaming platform.",
     highlights: [
-      "Full-stack features in Angular, Next.js, React, Node.js, PHP",
-      "Integrated OpenAI APIs for personalised content and internal automations",
-      "Built and optimised RESTful APIs over SQL and MongoDB",
+      "Built performant, responsive UIs with Angular, React, Next.js and TypeScript",
+      "Integrated LLM APIs for personalised content, internal automations and natural-language features",
+      "Integrated RESTful and third-party APIs; contributed to Node.js, PHP, SQL and MongoDB services",
     ],
-    stack: ["Angular", "Next.js", "React", "Node.js", "PHP", "SQL", "MongoDB"],
+    stack: ["Angular", "React", "Next.js", "TypeScript", "Node.js", "PHP", "SQL", "MongoDB"],
     color: "#a855f7",
   },
   {
@@ -66,14 +66,13 @@ export const experience: Experience[] = [
     company: "Go-Code",
     role: "Full-Stack Developer",
     period: "Jul 2022 — Nov 2024",
-    summary:
-      "Delivered multiple client products and internal tools across the full stack.",
+    summary: "Client applications across the full stack.",
     highlights: [
-      "Built full-stack apps with Angular, React, TailwindCSS, MongoDB, Node.js",
-      "Designed RESTful APIs and third-party integrations",
-      "Owned Git workflows, code reviews and CI/CD",
+      "Built apps with Angular, React, TypeScript and TailwindCSS on Node.js and MongoDB backends",
+      "Built reusable UI components and optimised performance across devices",
+      "Designed RESTful and third-party API integrations; owned Git workflows, code reviews and CI/CD",
     ],
-    stack: ["React", "Angular", "Node.js", "MongoDB", "TailwindCSS", "TypeScript"],
+    stack: ["Angular", "React", "TypeScript", "TailwindCSS", "Node.js", "MongoDB"],
     color: "#f472b6",
   },
 ];
@@ -138,6 +137,7 @@ export const projects: Project[] = [
 export type SkillCategory = "ai" | "frontend" | "backend" | "data" | "cloud";
 
 export const skills: { name: string; category: SkillCategory }[] = [
+  { name: "Claude AI", category: "ai" },
   { name: "OpenAI", category: "ai" },
   { name: "LLM / MCP", category: "ai" },
   { name: "Prompt Eng.", category: "ai" },
@@ -149,6 +149,7 @@ export const skills: { name: string; category: SkillCategory }[] = [
   { name: "Angular", category: "frontend" },
   { name: "Vue", category: "frontend" },
   { name: "TypeScript", category: "frontend" },
+  { name: "RxJS", category: "frontend" },
   { name: "Three.js", category: "frontend" },
   { name: "Tailwind", category: "frontend" },
   { name: "SASS", category: "frontend" },

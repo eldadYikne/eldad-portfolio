@@ -5,23 +5,35 @@ type State = {
   ready: boolean;
   /** intro fly-in finished, controls live */
   started: boolean;
+  /** the visitor left the title screen (one-way) */
+  entered: boolean;
   zone: ZoneId | null;
   visited: ZoneId[];
   /** last zone visited for the first time, drives the +XP popup */
   reward: { id: ZoneId; at: number } | null;
   setReady: () => void;
   start: () => void;
+  setEntered: () => void;
   enter: (z: ZoneId | null) => void;
 };
 
 export const useGame = create<State>((set, get) => ({
   ready: false,
   started: false,
+  entered: false,
   zone: null,
   visited: [],
   reward: null,
   setReady: () => set({ ready: true }),
   start: () => set({ started: true }),
+  setEntered: () => {
+    try {
+      sessionStorage.setItem("island-entered", "1");
+    } catch {
+      /* ignore */
+    }
+    set({ entered: true });
+  },
   enter: (zone) => {
     if (zone === get().zone) return;
     if (zone && !get().visited.includes(zone)) {
@@ -51,6 +63,12 @@ export const input = {
   /** set on Space press, consumed by the player on the next frame */
   jump: false,
 };
+
+/**
+ * Title-screen → game transition. `p` eases toward `target` (0..1) and only
+ * ever moves forward: once you're on the island there's no way back.
+ */
+export const intro = { p: 0, target: 0 };
 
 export const player = {
   x: 0,

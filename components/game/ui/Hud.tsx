@@ -35,7 +35,7 @@ export function Hud() {
         </div>
         <div className="badge-info">
           <strong>Eldad Yikne</strong>
-          <em>CTO · Full-Stack Architect</em>
+          <em>Tech Lead · Full-Stack Developer</em>
           <div className="xp" aria-label={`${earned} of ${max} XP`}>
             <span style={{ width: `${Math.max(4, xp * 100)}%` }} />
             <b>

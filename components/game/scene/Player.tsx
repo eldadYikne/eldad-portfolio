@@ -6,7 +6,7 @@ import { Html, Outlines } from "@react-three/drei";
 import * as THREE from "three";
 import { CITY_COLLIDERS, COLLIDERS, PALETTE, PLAYER_LEVEL, ZONES, walkable } from "../world";
 import { toon, toon as toonMat } from "../toon";
-import { input, player, useGame } from "../store";
+import { input, intro, player, useGame } from "../store";
 import { sim, useCombat } from "../combat/state";
 import type { WeaponId } from "../combat/defs";
 import { sfx } from "../audio";
@@ -22,7 +22,7 @@ const COLLIDER_LISTS = [COLLIDERS, CITY_COLLIDERS];
 const move = new THREE.Vector3();
 const camTarget = new THREE.Vector3();
 const lookAt = new THREE.Vector3();
-const INTRO_CAM = new THREE.Vector3(0, 46, 34);
+const ORBIT = new THREE.Vector3();
 const ORIGIN = new THREE.Vector3(0, 0, 0);
 
 /**
@@ -40,8 +40,8 @@ export function Player() {
   const ring = useRef<THREE.Mesh>(null);
   const marker = useRef<THREE.Mesh>(null);
   const phase = useRef(0);
-  const intro = useRef(0);
   const landSquash = useRef(0);
+  const plate = useRef<HTMLDivElement>(null);
   const sprintZoom = useRef(0);
   const landPuff = useRef(0);
   const camera = useThree((s) => s.camera);
@@ -57,14 +57,12 @@ export function Player() {
     const { started, start, enter } = useGame.getState();
     const t = state.clock.elapsedTime;
 
-    /* ---- intro: swoop down, drop the player in ---- */
-    if (!started) {
-      intro.current = Math.min(1, intro.current + dt / 2.6);
-      if (intro.current >= 1) start();
-    }
-    const e = 1 - Math.pow(1 - intro.current, 3);
-    const drop = Math.max(0, 1 - Math.max(0, intro.current - 0.45) / 0.4); // 1 → 0
-    const bounce = intro.current > 0.85 ? Math.sin((intro.current - 0.85) * 40) * (1 - intro.current) * 0.6 : 0;
+    /* ---- title screen → game: progress is driven by the intro overlay ---- */
+    const ip = intro.p;
+    if (!started && useGame.getState().entered && ip >= 0.999) start();
+    const e = ip * ip * (3 - 2 * ip); // smoothstep
+    const drop = Math.max(0, 1 - Math.max(0, ip - 0.5) / 0.42); // player falls in during the last half
+    const bounce = ip > 0.92 && ip < 1 ? Math.sin((ip - 0.92) * 60) * (1 - ip) * 4 : 0;
 
     /* ---- input → desired direction ---- */
     move.set(0, 0, 0);
@@ -155,6 +153,10 @@ export function Player() {
     /* ---- pose ---- */
     if (root.current) {
       root.current.position.set(player.x, drop * 14 + bounce + player.y, player.z);
+      // Hidden on the title screen until the drop-in begins.
+      const shown = started || ip > 0.5;
+      root.current.visible = shown;
+      if (plate.current) plate.current.style.display = shown ? "" : "none";
       root.current.rotation.y = player.heading;
     }
     const speedK = player.moving ? 1 : 0;
@@ -221,7 +223,10 @@ export function Player() {
       camTarget.y += (1 - aspect) * 14;
       camTarget.z += (1 - aspect) * 10;
     }
-    if (!started) camTarget.lerpVectors(INTRO_CAM, camTarget, e);
+    // Title screen: a slow cinematic orbit high above the island.
+    const oa = t * 0.05;
+    ORBIT.set(Math.sin(oa) * 46, 32, Math.cos(oa) * 46);
+    if (!started) camTarget.lerpVectors(ORBIT, camTarget, e);
     camera.position.lerp(camTarget, started ? 1 - Math.exp(-5 * dt) : 1);
     lookAt.set(player.x, 0.8, player.z - 1);
     if (!started) lookAt.lerpVectors(ORIGIN, lookAt, e);
@@ -235,7 +240,7 @@ export function Player() {
           <Avatar legL={legL} legR={legR} armL={armL} armR={armR} />
         </group>
         <Html position={[0, 2.55, 0]} center zIndexRange={[20, 10]} pointerEvents="none">
-          <div className="nameplate">
+          <div className="nameplate" ref={plate}>
             <span className="nameplate-lvl">{PLAYER_LEVEL}</span>
             <span className="nameplate-name">Eldad</span>
           </div>

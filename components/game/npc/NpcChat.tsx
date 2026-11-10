@@ -5,7 +5,7 @@ import type { RealtimeSession } from "@openai/agents/realtime";
 import { useNpc, type Msg } from "./state";
 
 const SUGGESTIONS = [
-  "What do you do as CTO at Asadra?",
+  "What do you do as Tech Lead at BrightBuild?",
   "What's your favourite tech stack?",
   "Tell me about Bishvil Giborim",
   "ספר לי על משחקי התנועה",

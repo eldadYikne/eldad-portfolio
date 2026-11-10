@@ -53,7 +53,7 @@ export function ZoneRings() {
 }
 
 function landmarkHeight(id: string) {
-  return ({ asadra: 7.6, codere: 5, gocode: 4.6, giborim: 4.2, logiki: 4.8, motion: 3.4, skills: 3.8, education: 5.4, about: 3.6, contact: 2.4 } as Record<string, number>)[id] ?? 4;
+  return ({ brightbuild: 7.6, codere: 5, gocode: 4.6, giborim: 4.2, logiki: 4.8, motion: 3.4, skills: 3.8, education: 5.4, about: 3.6, contact: 2.4 } as Record<string, number>)[id] ?? 4;
 }
 
 /** Burst of confetti when a zone is visited for the first time. */
