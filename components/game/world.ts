@@ -46,7 +46,7 @@ export const PALETTE = {
 
 export type ZoneId =
   | "about"
-  | "asadra"
+  | "brightbuild"
   | "codere"
   | "gocode"
   | "giborim"
@@ -73,7 +73,7 @@ export type Zone = {
 
 export const ZONES: Zone[] = [
   { id: "about", pos: [0, -1.5], ring: [0, 1.6], ringR: 2.2, solidR: 1.1, color: PALETTE.yellow, label: "Spawn · About me", icon: "⭐", kind: "about" },
-  { id: "asadra", pos: [-9, -15], ring: [-9, -11.2], ringR: 2.4, solidR: 2.4, color: "#22b8e8", label: "Asadra HQ", icon: "🚀", kind: "experience" },
+  { id: "brightbuild", pos: [-9, -15], ring: [-9, -11.2], ringR: 2.4, solidR: 2.4, color: "#22b8e8", label: "BrightBuild HQ", icon: "🚀", kind: "experience" },
   { id: "codere", pos: [0.5, -18], ring: [0.5, -14.2], ringR: 2.4, solidR: 2.6, color: PALETTE.purple, label: "Codere Online", icon: "🎲", kind: "experience" },
   { id: "gocode", pos: [10, -14.5], ring: [9, -10.8], ringR: 2.4, solidR: 2.4, color: PALETTE.pink, label: "Go-Code", icon: "⚙️", kind: "experience" },
   { id: "giborim", pos: [17.5, -2], ring: [13.6, -1.5], ringR: 2.4, solidR: 2.6, color: PALETTE.coral, label: "Bishvil Giborim", icon: "🏅", kind: "project" },
@@ -215,7 +215,7 @@ export type ZoneCard = {
 };
 
 export function cardFor(id: ZoneId): ZoneCard {
-  const exp = experience.find((e) => e.id === id || (id === "codere" && e.id === "codere"));
+  const exp = experience.find((e) => e.id === id);
   const proj = projects.find((p) => p.id === id);
   switch (id) {
     case "about":
@@ -227,10 +227,10 @@ export function cardFor(id: ZoneId): ZoneCard {
         chips: [`🗓️ ${YEARS_EXPERIENCE}+ years experience`, `🏢 ${experience.length} companies`, `🚀 ${projects.length}+ products shipped`, `🧠 ${skills.length} skills`],
         chipsLabel: "Stats",
       };
-    case "asadra":
+    case "brightbuild":
     case "codere":
     case "gocode": {
-      const e = exp ?? experience.find((x) => x.id === (id === "gocode" ? "gocode" : id))!;
+      const e = exp!;
       return { kicker: e.period, title: e.company, subtitle: e.role, lines: [e.summary, ...e.highlights], chips: e.stack, chipsLabel: "Loadout" };
     }
     case "giborim":

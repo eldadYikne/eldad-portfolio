@@ -8,9 +8,9 @@ import Script from "next/script";
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
-  title: "Eldad Yikne | CTO & Full-Stack Architect",
+  title: "Eldad Yikne | Tech Lead & Full-Stack Developer",
   description:
-    "CTO & Full-Stack Architect. Explore an interactive 3D physics portfolio: experience, AI products, computer vision and more.",
+    "Tech Lead & Full-Stack Developer (Angular, React, Next.js, AI). Explore an interactive 3D game portfolio: experience, projects, a GitHub city and an AI digital twin.",
   keywords: [
     "Full-Stack Developer",
     "React",
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "Eldad Yikne" }],
   openGraph: {
-    title: "Eldad Yikne | CTO & Full-Stack Architect",
+    title: "Eldad Yikne | Tech Lead & Full-Stack Developer",
     description:
       "Full-Stack Developer specializing in modern web technologies and AI-driven architecture",
     type: "website",

@@ -6,6 +6,7 @@ import { Lilita_One } from "next/font/google";
 import { input, isTyping, useGame } from "./store";
 import { Hud } from "./ui/Hud";
 import { AudioDirector } from "./AudioDirector";
+import { IntroScreen } from "./ui/IntroScreen";
 import { useCombat } from "./combat/state";
 import "./game.css";
 
@@ -78,6 +79,7 @@ export function GameHome({ children }: { children: ReactNode }) {
       <div className="sr-only">{children}</div>
       <div className="game-canvas">{webgl && <Scene />}</div>
       <Hud />
+      <IntroScreen />
       <Loader done={ready} />
     </div>
   );
