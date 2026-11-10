@@ -10,6 +10,7 @@ import { Nature } from "./Nature";
 import { Landmarks } from "./Landmarks";
 import { Player } from "./Player";
 import { ZoneRings } from "./ZoneRings";
+import { Combat } from "../combat/Combat";
 
 const SKY = "#7fd6f5";
 
@@ -50,6 +51,7 @@ export default function Scene() {
         <Landmarks />
         <ZoneRings />
         <Player />
+        <Combat />
         <Ready />
         <Preload all />
       </Suspense>

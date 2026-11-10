@@ -42,4 +42,12 @@ export const input = {
   target: null as null | { x: number; z: number },
 };
 
-export const player = { x: 0, z: 4.6, heading: 0, moving: false };
+export const player = {
+  x: 0,
+  z: 4.6,
+  heading: 0,
+  moving: false,
+  /** while > 0 the avatar faces its attack target instead of its walking direction */
+  aimT: 0,
+  aimHeading: 0,
+};

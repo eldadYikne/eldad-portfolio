@@ -7,6 +7,8 @@ import * as THREE from "three";
 import { COLLIDERS, PALETTE, PLAYER_LEVEL, ZONES, insideIsland } from "../world";
 import { toon } from "../toon";
 import { input, player, useGame } from "../store";
+import { sim, useCombat } from "../combat/state";
+import type { WeaponId } from "../combat/defs";
 
 const SPEED = 6.5;
 const RADIUS = 0.45;
@@ -98,14 +100,20 @@ export function Player() {
         player.x = nx;
         player.z = nz;
       } else input.target = null;
-      const want = Math.atan2(move.x, move.z);
+    }
+    // Face the attack target while shooting, otherwise the walking direction.
+    player.aimT = Math.max(0, player.aimT - dt);
+    if (player.aimT > 0 || player.moving) {
+      const want = player.aimT > 0 ? player.aimHeading : Math.atan2(move.x, move.z);
       let diff = want - player.heading;
       diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-      player.heading += diff * Math.min(1, dt * 14);
+      player.heading += diff * Math.min(1, dt * (player.aimT > 0 ? 20 : 14));
     }
 
     /* ---- zone triggers ---- */
-    if (started) {
+    const inMission = !!useCombat.getState().mission;
+    if (started && inMission) enter(null);
+    else if (started) {
       let inside: (typeof ZONES)[number]["id"] | null = null;
       for (const z of ZONES) if (Math.hypot(player.x - z.ring[0], player.z - z.ring[1]) < z.ringR) inside = z.id;
       enter(inside);
@@ -123,7 +131,19 @@ export function Player() {
     if (legL.current) legL.current.rotation.x = swing;
     if (legR.current) legR.current.rotation.x = -swing;
     if (armL.current) armL.current.rotation.x = -swing * 0.9;
-    if (armR.current) armR.current.rotation.x = swing * 0.9;
+    if (armR.current) {
+      const armed = useCombat.getState().weapon !== "fists" && inMission;
+      if (inMission) {
+        // Weapon raised forward, kicking back on every attack.
+        armR.current.rotation.x = (armed ? -1.35 : -1.5 * sim.recoil) + sim.recoil * 0.35;
+        armR.current.rotation.y = sim.slash.t < 1 ? 1.1 - sim.slash.t * 2.2 : 0;
+      } else {
+        armR.current.rotation.x = swing * 0.9;
+        armR.current.rotation.y = 0;
+      }
+    }
+    // Blink while invulnerable after taking a hit.
+    if (body.current) body.current.visible = !(sim.invuln > 0 && Math.floor(t * 24) % 2 === 0);
     if (body.current) {
       const hop = player.moving ? Math.abs(Math.cos(phase.current)) * 0.12 : Math.sin(t * 2) * 0.02;
       body.current.position.y = hop;
@@ -243,6 +263,7 @@ function Avatar({ legL, legR, armL, armR }: { legL: LimbRef; legR: LimbRef; armL
             <sphereGeometry args={[0.11, 10, 10]} />
             {ink}
           </mesh>
+          {i === 1 && <HeldWeapon />}
         </group>
       ))}
       {/* big head */}
@@ -278,6 +299,70 @@ function Avatar({ legL, legR, armL, armR }: { legL: LimbRef; legR: LimbRef; armL
     </group>
   );
 }
+
+/** The weapon in the right hand. The arm points down, so "forward" is -y. */
+function HeldWeapon() {
+  const weapon = useCombat((s) => s.weapon);
+  const inMission = useCombat((s) => !!s.mission);
+  if (!inMission || weapon === "fists") return null;
+  return <group position={[0, -0.55, 0.05]}>{WEAPON_MODELS[weapon]}</group>;
+}
+
+const glow = (c: string) => toon(c, { emissive: c, emissiveIntensity: 0.7 });
+const ink2 = <Outlines thickness={0.02} color={PALETTE.outline} />;
+const WEAPON_MODELS: Record<Exclude<WeaponId, "fists">, React.ReactNode> = {
+  sword: (
+    <>
+      <mesh position={[0, -0.08, 0]} material={toon(PALETTE.navy)}>
+        <boxGeometry args={[0.32, 0.06, 0.08]} />
+        {ink2}
+      </mesh>
+      <mesh position={[0, -0.6, 0]} material={glow("#7ef9ff")}>
+        <boxGeometry args={[0.1, 0.95, 0.03]} />
+        {ink2}
+      </mesh>
+    </>
+  ),
+  pistol: (
+    <mesh position={[0, -0.22, 0]} material={toon(PALETTE.yellow)}>
+      <boxGeometry args={[0.14, 0.42, 0.16]} />
+      {ink2}
+    </mesh>
+  ),
+  shotgun: (
+    <>
+      <mesh position={[0, -0.35, 0]} material={toon(PALETTE.pink)}>
+        <boxGeometry args={[0.16, 0.7, 0.18]} />
+        {ink2}
+      </mesh>
+      <mesh position={[0, -0.75, 0]} material={toon(PALETTE.navy)}>
+        <cylinderGeometry args={[0.07, 0.07, 0.2, 8]} />
+      </mesh>
+    </>
+  ),
+  laser: (
+    <>
+      <mesh position={[0, -0.32, 0]} material={toon(PALETTE.purple)}>
+        <cylinderGeometry args={[0.07, 0.1, 0.64, 10]} />
+        {ink2}
+      </mesh>
+      <mesh position={[0, -0.68, 0]} material={glow("#e9d5ff")}>
+        <sphereGeometry args={[0.09, 10, 10]} />
+      </mesh>
+    </>
+  ),
+  rocket: (
+    <>
+      <mesh position={[0, -0.3, 0]} material={toon(PALETTE.coral)}>
+        <cylinderGeometry args={[0.13, 0.13, 0.9, 12]} />
+        {ink2}
+      </mesh>
+      <mesh position={[0, -0.78, 0]} material={toon(PALETTE.yellow)}>
+        <coneGeometry args={[0.13, 0.22, 12]} />
+      </mesh>
+    </>
+  ),
+};
 
 /** Little dust puffs kicked up while running. */
 function Dust() {

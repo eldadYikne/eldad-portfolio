@@ -119,7 +119,20 @@ export function distToPaths(x: number, z: number) {
   return best;
 }
 
+/* ---------------- monster nests (boss missions) ---------------- */
+
+export type BossId = "critter" | "octo" | "knot";
+export type Nest = { id: BossId; pos: [number, number]; ring: [number, number]; ringR: number };
+
+export const NESTS: Nest[] = [
+  { id: "critter", pos: [-17.5, -8.5], ring: [-14.4, -6.6], ringR: 2.2 },
+  { id: "octo", pos: [15.5, -11.5], ring: [13, -8.6], ringR: 2.2 },
+  { id: "knot", pos: [-18, 9], ring: [-14.8, 7.4], ringR: 2.2 },
+];
+export const nestById = Object.fromEntries(NESTS.map((n) => [n.id, n])) as Record<BossId, Nest>;
+
 function nearZone(x: number, z: number, pad: number) {
+  if (NESTS.some((n) => Math.hypot(x - n.pos[0], z - n.pos[1]) < 2.6 + pad || Math.hypot(x - n.ring[0], z - n.ring[1]) < n.ringR + pad)) return true;
   return ZONES.some((zn) => Math.hypot(x - zn.pos[0], z - zn.pos[1]) < zn.solidR + pad || Math.hypot(x - zn.ring[0], z - zn.ring[1]) < zn.ringR + pad * 0.6);
 }
 
@@ -159,6 +172,7 @@ export const FLOWERS = scatter(5, 220, (x, z) => insideIsland(x, z, 0.8) && dist
 
 export const COLLIDERS: { x: number; z: number; r: number }[] = [
   ...ZONES.map((z) => ({ x: z.pos[0], z: z.pos[1], r: z.solidR })),
+  ...NESTS.map((n) => ({ x: n.pos[0], z: n.pos[1], r: 1.6 })),
   ...TREES.map((t) => ({ x: t.x, z: t.z, r: 0.55 * t.s })),
   ...ROCKS.filter((r) => r.s > 0.6).map((r) => ({ x: r.x, z: r.z, r: 0.6 * r.s })),
 ];

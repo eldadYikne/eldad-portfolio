@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { PLAYER_LEVEL, ZONES, islandRadius, zoneById } from "../world";
+import { NESTS, PLAYER_LEVEL, ZONES, islandRadius, zoneById } from "../world";
+import { BOSSES } from "../combat/defs";
+import { useCombat } from "../combat/state";
+import { MissionHud } from "./MissionHud";
 import { input, player, useGame } from "../store";
 import { ZoneCard } from "./ZoneCard";
 
@@ -10,11 +13,14 @@ const AVATAR = "https://res.cloudinary.com/dkfnkf3gl/image/upload/w_120,h_120,c_
 export function Hud() {
   const started = useGame((s) => s.started);
   const visited = useGame((s) => s.visited);
-  const total = ZONES.length;
-  const xp = visited.length / total;
+  const defeated = useCombat((s) => s.defeated);
+  const inMission = useCombat((s) => !!s.mission);
+  const earned = visited.length * 100 + defeated.length * 500;
+  const max = ZONES.length * 100 + NESTS.length * 500;
+  const xp = earned / max;
 
   return (
-    <div className={`hud ${started ? "in" : ""}`}>
+    <div className={`hud ${started ? "in" : ""} ${inMission ? "mission" : ""}`}>
       <div className="badge">
         <div className="badge-avatar">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -24,10 +30,10 @@ export function Hud() {
         <div className="badge-info">
           <strong>Eldad Yikne</strong>
           <em>CTO · Full-Stack Architect</em>
-          <div className="xp" aria-label={`Explored ${visited.length} of ${total} places`}>
+          <div className="xp" aria-label={`${earned} of ${max} XP`}>
             <span style={{ width: `${Math.max(4, xp * 100)}%` }} />
             <b>
-              {visited.length * 100} / {total * 100} XP
+              {earned} / {max} XP
             </b>
           </div>
         </div>
@@ -39,7 +45,8 @@ export function Hud() {
       </div>
 
       <RewardPop />
-      <ZoneCard />
+      {!inMission && <ZoneCard />}
+      <MissionHud />
       <Joystick />
       <p className="hint">
         <kbd>W</kbd>
@@ -53,6 +60,7 @@ export function Hud() {
 
 function Quests() {
   const visited = useGame((s) => s.visited);
+  const defeated = useCombat((s) => s.defeated);
   const [open, setOpen] = useState(true);
   const left = ZONES.filter((z) => !visited.includes(z.id));
   return (
@@ -70,7 +78,18 @@ function Quests() {
           ))}
         </ul>
       )}
-      {left.length === 0 && <p className="quests-done">🏆 Island complete!</p>}
+      <div className="quests-sub">⚔️ Boss missions <span>{defeated.length}/{NESTS.length}</span></div>
+      {open && (
+        <ul>
+          {NESTS.map((n) => (
+            <li key={n.id} className={defeated.includes(n.id) ? "done" : ""}>
+              <span>{defeated.includes(n.id) ? "✓" : BOSSES[n.id].icon}</span>
+              {BOSSES[n.id].name}
+            </li>
+          ))}
+        </ul>
+      )}
+      {left.length === 0 && defeated.length === NESTS.length && <p className="quests-done">🏆 Island complete!</p>}
     </div>
   );
 }
@@ -114,6 +133,14 @@ function Minimap() {
           <circle r={2.6} fill={visited.includes(z.id) ? "#ffffff" : z.color} stroke="#2a1f3d" strokeWidth={0.8} />
           <text fontSize={3} textAnchor="middle" dy={1.1}>
             {z.icon}
+          </text>
+        </g>
+      ))}
+      {NESTS.map((n) => (
+        <g key={n.id} transform={`translate(${n.pos[0]} ${n.pos[1]})`} onClick={() => (input.target = { x: n.ring[0], z: n.ring[1] })} style={{ cursor: "pointer" }}>
+          <circle r={2.8} fill="#ef4444" stroke="#2a1f3d" strokeWidth={0.8} />
+          <text fontSize={3} textAnchor="middle" dy={1.1}>
+            {BOSSES[n.id].icon}
           </text>
         </g>
       ))}
