@@ -6,7 +6,7 @@ import { BOSSES } from "../combat/defs";
 import { useCombat } from "../combat/state";
 import { MissionHud } from "./MissionHud";
 import { isMuted, onMute, setMuted } from "../audio";
-import { input, player, useGame } from "../store";
+import { input, isTyping, player, useGame } from "../store";
 import { ZoneCard } from "./ZoneCard";
 
 const AVATAR = "https://res.cloudinary.com/dkfnkf3gl/image/upload/w_120,h_120,c_fill,g_face/v1768326078/portfolio/projects/dtcmayvvyrmwldrt6kub.png";
@@ -181,7 +181,7 @@ function MuteButton() {
     setM(isMuted());
     // M toggles sound from anywhere (except while typing).
     const onKey = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() === "m" && !(e.target as HTMLElement)?.closest("input, textarea")) setMuted(!isMuted());
+      if (e.code === "KeyM" && !isTyping(e)) setMuted(!isMuted());
     };
     window.addEventListener("keydown", onKey);
     const off = onMute(setM);

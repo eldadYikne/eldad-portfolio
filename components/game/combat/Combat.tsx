@@ -5,7 +5,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import { COLLIDERS, NESTS, insideIsland, nestById, type BossId, type Nest } from "../world";
-import { input, player } from "../store";
+import { input, isTyping, player } from "../store";
 import { sfx } from "../audio";
 import { toon } from "../toon";
 import { BOSSES, PLAYER_MAX_HP, WAVES, WAVE_WEAPONS, WEAPONS, waveStats } from "./defs";
@@ -184,7 +184,7 @@ export function Combat() {
       if (e.pointerType === "mouse") input.firing = false;
     };
     const key = (e: KeyboardEvent) => {
-      if (e.code === "Space" && !(e.target as HTMLElement)?.closest("input, textarea")) {
+      if (e.code === "Space" && !isTyping(e)) {
         e.preventDefault();
         input.firing = e.type === "keydown";
       }

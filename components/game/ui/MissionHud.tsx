@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { BOSSES, PLAYER_MAX_HP, WAVES, WEAPONS, waveStats } from "../combat/defs";
 import { useCombat } from "../combat/state";
+import { isTyping } from "../store";
 
 export function MissionHud() {
   const near = useCombat((s) => s.nearNest);
@@ -12,9 +13,9 @@ export function MissionHud() {
   // Enter / E starts the mission you're standing at.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement)?.closest("input, textarea")) return;
+      if (isTyping(e)) return;
       const st = useCombat.getState();
-      if ((e.key === "Enter" || e.key.toLowerCase() === "e") && st.nearNest && !st.mission) st.start(st.nearNest);
+      if ((e.code === "Enter" || e.code === "NumpadEnter" || e.code === "KeyE") && st.nearNest && !st.mission) st.start(st.nearNest);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);

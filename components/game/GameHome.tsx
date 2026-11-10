@@ -3,7 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { Lilita_One } from "next/font/google";
-import { input, useGame } from "./store";
+import { input, isTyping, useGame } from "./store";
 import { Hud } from "./ui/Hud";
 import { AudioDirector } from "./AudioDirector";
 import { useCombat } from "./combat/state";
@@ -14,7 +14,14 @@ const game = Lilita_One({ weight: "400", subsets: ["latin"], variable: "--font-g
 // three.js only ever loads in the browser, in its own chunk.
 const Scene = dynamic(() => import("./scene/Scene"), { ssr: false });
 
-const MOVE_KEYS = new Set(["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright"]);
+/**
+ * Physical key → movement direction. Uses KeyboardEvent.code, not .key, so it
+ * works with any keyboard layout (on a Hebrew layout W types "'", A types "ש").
+ */
+const MOVE_CODES: Record<string, string> = {
+  KeyW: "w", KeyA: "a", KeyS: "s", KeyD: "d",
+  ArrowUp: "arrowup", ArrowDown: "arrowdown", ArrowLeft: "arrowleft", ArrowRight: "arrowright",
+};
 
 /**
  * `children` is the server-rendered semantic portfolio: always present for
@@ -32,12 +39,15 @@ export function GameHome({ children }: { children: ReactNode }) {
       setWebgl(false);
     }
     const down = (e: KeyboardEvent) => {
-      const k = e.key.toLowerCase();
-      if (!MOVE_KEYS.has(k) || (e.target as HTMLElement)?.closest("input, textarea")) return;
+      const k = MOVE_CODES[e.code];
+      if (!k || isTyping(e)) return;
       e.preventDefault();
       input.keys.add(k);
     };
-    const up = (e: KeyboardEvent) => input.keys.delete(e.key.toLowerCase());
+    const up = (e: KeyboardEvent) => {
+      const k = MOVE_CODES[e.code];
+      if (k) input.keys.delete(k);
+    };
     const blur = () => input.keys.clear();
     window.addEventListener("keydown", down);
     window.addEventListener("keyup", up);

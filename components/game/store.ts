@@ -57,3 +57,8 @@ export const player = {
   aimT: 0,
   aimHeading: 0,
 };
+
+/** True while the user is typing in a form field (key events must not drive the game). */
+export function isTyping(e: Event) {
+  return e.target instanceof Element && !!e.target.closest("input, textarea");
+}
