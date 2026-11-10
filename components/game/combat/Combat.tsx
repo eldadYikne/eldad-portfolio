@@ -173,7 +173,7 @@ export function Combat() {
   const kind = mission?.boss;
   const { camera, raycaster, gl } = useThree();
 
-  // Hold the mouse button (or Space) to fire. Only presses on the canvas count,
+  // Hold the mouse button to fire. Only presses on the canvas count,
   // so clicking HUD buttons never shoots.
   useEffect(() => {
     const el = gl.domElement;
@@ -183,23 +183,13 @@ export function Combat() {
     const up = (e: PointerEvent) => {
       if (e.pointerType === "mouse") input.firing = false;
     };
-    const key = (e: KeyboardEvent) => {
-      if (e.code === "Space" && !isTyping(e)) {
-        e.preventDefault();
-        input.firing = e.type === "keydown";
-      }
-    };
     const blur = () => (input.firing = false);
     el.addEventListener("pointerdown", down);
     window.addEventListener("pointerup", up);
-    window.addEventListener("keydown", key);
-    window.addEventListener("keyup", key);
     window.addEventListener("blur", blur);
     return () => {
       el.removeEventListener("pointerdown", down);
       window.removeEventListener("pointerup", up);
-      window.removeEventListener("keydown", key);
-      window.removeEventListener("keyup", key);
       window.removeEventListener("blur", blur);
     };
   }, [gl]);
@@ -357,7 +347,8 @@ export function Combat() {
       e.x += ((dx / d) * e.speed + e.kx) * dt;
       e.z += ((dz / d) * e.speed + e.kz) * dt;
 
-      if (d < e.r + 0.45 && e.hitCd <= 0) {
+      // Jumping clears small monsters (not the boss).
+      if (d < e.r + 0.45 && e.hitCd <= 0 && (e.boss || player.y < 0.7)) {
         hurtPlayer(e.damage, e.x, e.z);
         e.hitCd = 0.8;
       }

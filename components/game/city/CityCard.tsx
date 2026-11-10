@@ -15,13 +15,25 @@ export function CityCard() {
       <span className="card-kicker">{b.language ?? "Repo"}</span>
       <h2>{b.name}</h2>
       <p className="card-sub">{b.description ?? "No description yet."}</p>
-      <div className="chips">
+      <div className="chips meta">
         <span>⭐ {b.stars}</span>
         <span>🍴 {b.forks}</span>
         <span>📦 {(b.size / 1024).toFixed(1)} MB</span>
         <span>🕒 {pushed.toLocaleDateString(undefined, { month: "short", year: "numeric" })}</span>
         {b.fresh && <span>🔥 active</span>}
       </div>
+      {b.stack.length > 0 && (
+        <>
+          <span className="card-label">Stack</span>
+          <div className="chips stack">
+            {b.stack.map((t, i) => (
+              <span key={t} style={{ animationDelay: `${120 + i * 40}ms` }}>
+                {t}
+              </span>
+            ))}
+          </div>
+        </>
+      )}
       <div className="card-links">
         <a href={b.url} target="_blank" rel="noopener noreferrer">Open on GitHub ↗</a>
       </div>

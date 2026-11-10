@@ -44,8 +44,12 @@ export const input = {
   aim: { x: 0, z: 0, valid: false },
   /** touch aim stick, -1..1 (x = right, y = down) */
   aimStick: { x: 0, y: 0, active: false },
-  /** mouse button / Space / aim stick held */
+  /** mouse button / aim stick held */
   firing: false,
+  /** Shift held */
+  sprint: false,
+  /** set on Space press, consumed by the player on the next frame */
+  jump: false,
 };
 
 export const player = {
@@ -56,6 +60,9 @@ export const player = {
   /** while > 0 the avatar faces its attack target instead of its walking direction */
   aimT: 0,
   aimHeading: 0,
+  /** height above the ground while jumping */
+  y: 0,
+  vy: 0,
 };
 
 /** True while the user is typing in a form field (key events must not drive the game). */

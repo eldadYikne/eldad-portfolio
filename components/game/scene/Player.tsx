@@ -9,8 +9,12 @@ import { toon, toon as toonMat } from "../toon";
 import { input, player, useGame } from "../store";
 import { sim, useCombat } from "../combat/state";
 import type { WeaponId } from "../combat/defs";
+import { sfx } from "../audio";
 
 const SPEED = 6.5;
+const SPRINT = 1.7;
+const JUMP_V = 9.5;
+const GRAVITY = 28;
 const RADIUS = 0.45;
 const CAM_OFFSET = new THREE.Vector3(0, 23, 17);
 
@@ -37,6 +41,9 @@ export function Player() {
   const marker = useRef<THREE.Mesh>(null);
   const phase = useRef(0);
   const intro = useRef(0);
+  const landSquash = useRef(0);
+  const sprintZoom = useRef(0);
+  const landPuff = useRef(0);
   const camera = useThree((s) => s.camera);
 
   useEffect(() => {
@@ -80,9 +87,33 @@ export function Player() {
     }
     const len = Math.min(1, move.length());
     player.moving = len > 0.05;
+    const sprinting = input.sprint && player.moving;
+
+    /* ---- jump ---- */
+    const grounded = player.y <= 0.0001;
+    if (input.jump) {
+      input.jump = false;
+      if (grounded && started) {
+        player.vy = JUMP_V;
+        sfx("jump");
+      }
+    }
+    if (!grounded || player.vy > 0) {
+      player.vy -= GRAVITY * dt;
+      player.y += player.vy * dt;
+      if (player.y <= 0) {
+        player.y = 0;
+        player.vy = 0;
+        landSquash.current = 1;
+        landPuff.current = performance.now();
+        lastLanding = landPuff.current;
+        sfx("land");
+      }
+    }
+    landSquash.current = Math.max(0, landSquash.current - dt * 5);
 
     if (player.moving) {
-      move.normalize().multiplyScalar(SPEED * len * dt);
+      move.normalize().multiplyScalar(SPEED * (sprinting ? SPRINT : 1) * len * dt);
       let nx = player.x + move.x;
       let nz = player.z + move.z;
       // Push out of landmarks, trees and rocks.
@@ -123,11 +154,11 @@ export function Player() {
 
     /* ---- pose ---- */
     if (root.current) {
-      root.current.position.set(player.x, drop * 14 + bounce, player.z);
+      root.current.position.set(player.x, drop * 14 + bounce + player.y, player.z);
       root.current.rotation.y = player.heading;
     }
     const speedK = player.moving ? 1 : 0;
-    phase.current += dt * (player.moving ? 13 : 2);
+    phase.current += dt * (player.moving ? (sprinting ? 19 : 13) : 2);
     const s = Math.sin(phase.current);
     const swing = s * 0.85 * speedK;
     if (legL.current) legL.current.rotation.x = swing;
@@ -144,6 +175,18 @@ export function Player() {
         armR.current.rotation.y = 0;
       }
     }
+    // In the air: tuck the legs, throw the free arm up.
+    if (player.y > 0.05) {
+      if (legL.current) legL.current.rotation.x = -0.7;
+      if (legR.current) legR.current.rotation.x = 0.35;
+      if (armL.current) armL.current.rotation.x = -2.4;
+    }
+    if (body.current && landSquash.current > 0) {
+      const q = 1 - landSquash.current * 0.22;
+      body.current.scale.set(1 / Math.sqrt(q), q, 1 / Math.sqrt(q));
+    }
+    // Lean further forward when sprinting.
+    if (body.current && sprinting) body.current.rotation.x = 0.28;
     // Blink while invulnerable after taking a hit.
     if (body.current) body.current.visible = !(sim.invuln > 0 && Math.floor(t * 24) % 2 === 0);
     if (body.current) {
@@ -169,6 +212,9 @@ export function Player() {
 
     /* ---- camera ---- */
     camTarget.set(player.x, 0, player.z).add(CAM_OFFSET);
+    sprintZoom.current = THREE.MathUtils.damp(sprintZoom.current, sprinting ? 1 : 0, 3, dt);
+    camTarget.y += sprintZoom.current * 2.5;
+    camTarget.z += sprintZoom.current * 2;
     // Narrow / portrait screens: pull back so the island stays readable.
     const aspect = state.size.width / state.size.height;
     if (aspect < 1) {
@@ -382,6 +428,10 @@ const WEAPON_MODELS: Record<Exclude<WeaponId, "fists">, React.ReactNode> = {
   ),
 };
 
+/** Time of the last landing, shared between the player and its dust. */
+let lastLanding = 0;
+const lastLand = () => lastLanding;
+
 /** Little dust puffs kicked up while running. */
 function Dust() {
   const COUNT = 18;
@@ -389,18 +439,30 @@ function Dust() {
   const puffs = useMemo(() => Array.from({ length: COUNT }, () => ({ x: 0, z: 0, t: 1 })), []);
   const next = useRef(0);
   const timer = useRef(0);
+  const landed = useRef(0);
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
   useFrame((_, dt) => {
     const mesh = ref.current;
     if (!mesh) return;
     timer.current -= dt;
-    if (player.moving && timer.current <= 0) {
-      timer.current = 0.09;
+    if (player.moving && player.y < 0.05 && timer.current <= 0) {
+      timer.current = input.sprint ? 0.05 : 0.09;
       const p = puffs[next.current++ % COUNT];
       p.x = player.x - Math.sin(player.heading) * 0.35 + (Math.random() - 0.5) * 0.3;
       p.z = player.z - Math.cos(player.heading) * 0.35 + (Math.random() - 0.5) * 0.3;
       p.t = 0;
+    }
+    // Landing: a ring of puffs around the feet.
+    if (player.y === 0 && player.vy === 0 && landed.current !== lastLand()) {
+      landed.current = lastLand();
+      for (let k = 0; k < 6; k++) {
+        const p = puffs[next.current++ % COUNT];
+        const a = (k / 6) * Math.PI * 2;
+        p.x = player.x + Math.cos(a) * 0.45;
+        p.z = player.z + Math.sin(a) * 0.45;
+        p.t = 0;
+      }
     }
     puffs.forEach((p, i) => {
       p.t = Math.min(1, p.t + dt * 1.8);

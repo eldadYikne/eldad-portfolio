@@ -69,7 +69,7 @@ export function Hud() {
         <kbd>W</kbd>
         <kbd>A</kbd>
         <kbd>S</kbd>
-        <kbd>D</kbd> or click the map to walk · 🔫 missions: aim with the mouse, hold click to fire
+        <kbd>D</kbd> walk · <kbd>Shift</kbd> run · <kbd>Space</kbd> jump · 🔫 missions: aim with the mouse, hold click to fire
       </p>
     </div>
   );

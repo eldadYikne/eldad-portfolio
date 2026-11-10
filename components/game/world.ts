@@ -219,7 +219,14 @@ export function cardFor(id: ZoneId): ZoneCard {
   const proj = projects.find((p) => p.id === id);
   switch (id) {
     case "about":
-      return { kicker: "Player profile", title: profile.name, subtitle: profile.title, lines: [profile.tagline, ...profile.bio] };
+      return {
+        kicker: "Player profile",
+        title: profile.name,
+        subtitle: profile.title,
+        lines: [profile.tagline, ...profile.bio],
+        chips: [`🗓️ ${YEARS_EXPERIENCE}+ years experience`, `🏢 ${experience.length} companies`, `🚀 ${projects.length}+ products shipped`, `🧠 ${skills.length} skills`],
+        chipsLabel: "Stats",
+      };
     case "asadra":
     case "codere":
     case "gocode": {
@@ -252,5 +259,9 @@ export function cardFor(id: ZoneId): ZoneCard {
   }
 }
 
-/** Years since the first dev job: the player's level. */
-export const PLAYER_LEVEL = Math.max(1, new Date().getFullYear() - 2022);
+/** First professional dev role (Go-Code, July 2022). */
+const CAREER_START = new Date(2022, 6, 1);
+/** Whole years of professional experience, computed live so it never goes stale. */
+export const YEARS_EXPERIENCE = Math.max(1, Math.floor((Date.now() - CAREER_START.getTime()) / (365.25 * 86400_000)));
+/** The player's level = years of experience. */
+export const PLAYER_LEVEL = YEARS_EXPERIENCE;

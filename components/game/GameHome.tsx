@@ -39,16 +39,27 @@ export function GameHome({ children }: { children: ReactNode }) {
       setWebgl(false);
     }
     const down = (e: KeyboardEvent) => {
+      if (isTyping(e)) return;
+      if (e.code === "ShiftLeft" || e.code === "ShiftRight") input.sprint = true;
+      if (e.code === "Space") {
+        e.preventDefault(); // no page scroll / button activation
+        if (!e.repeat) input.jump = true;
+        return;
+      }
       const k = MOVE_CODES[e.code];
-      if (!k || isTyping(e)) return;
+      if (!k) return;
       e.preventDefault();
       input.keys.add(k);
     };
     const up = (e: KeyboardEvent) => {
+      if (e.code === "ShiftLeft" || e.code === "ShiftRight") input.sprint = false;
       const k = MOVE_CODES[e.code];
       if (k) input.keys.delete(k);
     };
-    const blur = () => input.keys.clear();
+    const blur = () => {
+      input.keys.clear();
+      input.sprint = false;
+    };
     window.addEventListener("keydown", down);
     window.addEventListener("keyup", up);
     window.addEventListener("blur", blur);
