@@ -41,11 +41,13 @@ export function Hud() {
       </div>
 
       <div className="side">
-        <Minimap />
+        <div className="side-row">
+          <MuteButton />
+          <Minimap />
+        </div>
         <Quests />
       </div>
 
-      <MuteButton />
       <RewardPop />
       {!inMission && <ZoneCard />}
       <MissionHud />
@@ -177,11 +179,28 @@ function MuteButton() {
   const [m, setM] = useState(false);
   useEffect(() => {
     setM(isMuted());
-    return onMute(setM);
+    // M toggles sound from anywhere (except while typing).
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() === "m" && !(e.target as HTMLElement)?.closest("input, textarea")) setMuted(!isMuted());
+    };
+    window.addEventListener("keydown", onKey);
+    const off = onMute(setM);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      off();
+    };
   }, []);
   return (
-    <button className="mute" onClick={() => setMuted(!m)} aria-label={m ? "Unmute sound" : "Mute sound"} aria-pressed={m}>
-      {m ? "🔇" : "🔊"}
+    <button
+      className={`mute ${m ? "off" : ""}`}
+      onClick={() => setMuted(!m)}
+      aria-label={m ? "Unmute sound" : "Mute sound"}
+      aria-pressed={m}
+      title="Toggle sound (M)"
+    >
+      <span>{m ? "🔇" : "🔊"}</span>
+      <small>{m ? "MUTED" : "SOUND"}</small>
+      <kbd>M</kbd>
     </button>
   );
 }

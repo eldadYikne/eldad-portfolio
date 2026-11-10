@@ -87,8 +87,6 @@ export type Enemy = {
   /** >0 while playing the death animation */
   dying: number;
   hitCd: number;
-  dashT: number;
-  dashing: number;
   shootT: number;
   kx: number;
   kz: number;
@@ -117,10 +115,9 @@ export const ENEMY_POOL = 44;
 export const sim = {
   enemies: make<Enemy>(ENEMY_POOL, () => ({
     active: false, boss: false, x: 0, z: 0, hp: 0, maxHp: 0, speed: 0, damage: 0, r: 0.5, heading: 0,
-    age: 0, flash: 0, dying: 0, hitCd: 0, dashT: 0, dashing: 0, shootT: 0, kx: 0, kz: 0,
+    age: 0, flash: 0, dying: 0, hitCd: 0, shootT: 0, kx: 0, kz: 0,
   })),
   shots: make<Shot>(120, () => ({ active: false, x: 0, z: 0, vx: 0, vz: 0, life: 0, damage: 0, pierce: false, blast: 0, hit: new Set() })),
-  ink: make<Shot>(40, () => ({ active: false, x: 0, z: 0, vx: 0, vz: 0, life: 0, damage: 0, pierce: false, blast: 0, hit: new Set() })),
   pickups: make<Pickup>(8, () => ({ active: false, kind: "heart", x: 0, z: 0, t: 0 })),
   blasts: make<Fx>(10, () => ({ active: false, x: 0, z: 0, t: 0, r: 1, color: "#fff" })),
   bursts: make<Fx>(16, () => ({ active: false, x: 0, z: 0, t: 0, r: 1, color: "#fff" })),
@@ -139,7 +136,6 @@ export const sim = {
 export function resetSim() {
   sim.enemies.forEach((e) => (e.active = false));
   sim.shots.forEach((s) => (s.active = false));
-  sim.ink.forEach((s) => (s.active = false));
   sim.pickups.forEach((p) => (p.active = false));
   sim.blasts.forEach((b) => (b.active = false));
   sim.bursts.forEach((b) => (b.active = false));

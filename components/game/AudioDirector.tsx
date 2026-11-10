@@ -8,7 +8,7 @@ import { ZONES } from "./world";
 
 const VOICES = [
   "welcome", "complete", "mission_start", "wave_1", "wave_2", "wave_3", "wave_4", "final_wave", "wave_clear",
-  "victory", "defeat", "boss_critter", "boss_octo", "boss_knot",
+  "victory", "defeat", "boss_critter",
   "w_sword", "w_pistol", "w_shotgun", "w_laser", "w_rocket",
   ...ZONES.map((z) => `z_${z.id}`),
 ];

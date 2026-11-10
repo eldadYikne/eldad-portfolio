@@ -119,7 +119,7 @@ function noise(filter: BiquadFilterType, f0: number, f1: number, env: Env, q = 1
 
 const last: Record<string, number> = {};
 /** Per-sound minimum gap, so a 30-monster melee doesn't turn into static. */
-const GAP: Record<string, number> = { hit: 0.045, pop: 0.05, ink: 0.12, shoot_laser: 0.06 };
+const GAP: Record<string, number> = { hit: 0.045, pop: 0.05, shoot_laser: 0.06 };
 
 export function sfx(name: string) {
   if (!ctx || muted) return;
@@ -168,9 +168,6 @@ export function sfx(name: string) {
     case "hurt":
       tone("sawtooth", 200, 70, { d: 0.18, peak: 0.3 });
       noise("lowpass", 600, 100, { d: 0.12, peak: 0.4 });
-      break;
-    case "ink":
-      tone("sine", 500 * j, 180, { d: 0.12, peak: 0.2 });
       break;
     case "pickup":
       [523, 659, 784, 1047].forEach((f, i) => tone("square", f, f, { d: 0.09, peak: 0.16 }, sfxBus, i * 0.06));

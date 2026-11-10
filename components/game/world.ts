@@ -121,13 +121,11 @@ export function distToPaths(x: number, z: number) {
 
 /* ---------------- monster nests (boss missions) ---------------- */
 
-export type BossId = "critter" | "octo" | "knot";
+export type BossId = "critter";
 export type Nest = { id: BossId; pos: [number, number]; ring: [number, number]; ringR: number };
 
 export const NESTS: Nest[] = [
   { id: "critter", pos: [-17.5, -8.5], ring: [-14.4, -6.6], ringR: 2.2 },
-  { id: "octo", pos: [15.5, -11.5], ring: [13, -8.6], ringR: 2.2 },
-  { id: "knot", pos: [-18, 9], ring: [-14.8, 7.4], ringR: 2.2 },
 ];
 export const nestById = Object.fromEntries(NESTS.map((n) => [n.id, n])) as Record<BossId, Nest>;
 

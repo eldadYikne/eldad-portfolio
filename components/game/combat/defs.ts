@@ -53,26 +53,6 @@ export const BOSSES: Record<BossId, Boss> = {
     speedFactor: 1.15,
     blurb: "Tiny, fast, and there are a LOT of them.",
   },
-  octo: {
-    id: "octo",
-    name: "Octo-Kittens",
-    title: "The Ink Pack",
-    icon: "🐙",
-    color: "#2b2d55",
-    tier: 1,
-    speedFactor: 0.85,
-    blurb: "Tanky tentacles. From wave 3 they spit ink.",
-  },
-  knot: {
-    id: "knot",
-    name: "Knot Spirits",
-    title: "The Spinning Six",
-    icon: "🌀",
-    color: "#1f1f24",
-    tier: 2,
-    speedFactor: 1.3,
-    blurb: "Spin fast, dash faster. The hardest mission.",
-  },
 };
 
 export const WAVES = 5;
@@ -89,10 +69,6 @@ export function waveStats(boss: Boss, wave: number) {
     spawnEvery: Math.max(0.35, 1.1 - wave * 0.12 - boss.tier * 0.1),
     /** monsters arrive in packs from one direction */
     pack: 1 + Math.floor(wave / 2),
-    /** Octo-kittens start spitting ink from wave 3 */
-    ranged: boss.id === "octo" && wave >= 3,
-    /** Knot spirits dash from wave 2 */
-    dash: boss.id === "knot" && wave >= 2,
     bossHp: 650 * m,
   };
 }

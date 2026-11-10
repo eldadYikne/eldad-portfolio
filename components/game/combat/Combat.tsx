@@ -53,7 +53,7 @@ function spawnEnemy(stats: ReturnType<typeof waveStats>, at?: [number, number]) 
   Object.assign(e, {
     active: true, boss: false, x, z, hp: stats.hp, maxHp: stats.hp, speed: stats.speed * (0.85 + Math.random() * 0.3),
     damage: stats.damage, r: 0.5, heading: 0, age: 0, flash: 0, dying: 0, hitCd: 0,
-    dashT: 1 + Math.random() * 2, dashing: 0, shootT: 1 + Math.random() * 2, kx: 0, kz: 0,
+    shootT: 1 + Math.random() * 2, kx: 0, kz: 0,
   } satisfies Partial<Enemy>);
   return e;
 }
@@ -317,18 +317,6 @@ export function Combat() {
       }
     }
 
-    /* ---- enemy ink ---- */
-    for (const s of sim.ink) {
-      if (!s.active) continue;
-      s.x += s.vx * dt;
-      s.z += s.vz * dt;
-      s.life -= dt;
-      if (Math.hypot(player.x - s.x, player.z - s.z) < 0.6) {
-        hurtPlayer(s.damage, s.x, s.z);
-        s.active = false;
-      } else if (s.life <= 0) s.active = false;
-    }
-
     /* ---- enemies ---- */
     let alive = 0;
     sim.enemies.forEach((e, i) => {
@@ -354,29 +342,8 @@ export function Combat() {
       const d = Math.hypot(dx, dz) || 1;
       e.heading = Math.atan2(dx, dz);
 
-      // Knot spirits (and their boss) dash.
-      if ((ws.dash || (e.boss && m.boss === "knot")) && d < 8) {
-        e.dashT -= dt;
-        if (e.dashT <= 0) {
-          e.dashing = 0.32;
-          e.dashT = e.boss ? 1.8 : 2.2 + Math.random() * 1.5;
-        }
-      }
-      e.dashing = Math.max(0, e.dashing - dt);
-
-      // Octo-kittens (and their boss) spit ink.
-      if ((ws.ranged || (e.boss && m.boss === "octo")) && d < 11) {
-        e.shootT -= dt;
-        if (e.shootT <= 0) {
-          const n = e.boss ? 3 : 1;
-          for (let k = 0; k < n; k++) fireShot(sim.ink, e.x, e.z, e.heading + (k - (n - 1) / 2) * 0.3, 7, 12, e.damage * 0.8);
-          sfx("ink");
-          e.shootT = e.boss ? 1.8 : 2.2 + Math.random();
-        }
-      }
-
       // The critter boss keeps calling for backup.
-      if (e.boss && m.boss === "critter") {
+      if (e.boss) {
         e.shootT -= dt;
         if (e.shootT <= 0) {
           for (let k = 0; k < 2; k++) {
@@ -387,10 +354,8 @@ export function Combat() {
         }
       }
 
-      const speed = e.speed * (e.dashing > 0 ? 3.2 : 1);
-      const keep = ws.ranged && !e.boss && d < 5 ? -0.4 : 1; // ink-spitters keep a little distance
-      e.x += ((dx / d) * speed * keep + e.kx) * dt;
-      e.z += ((dz / d) * speed * keep + e.kz) * dt;
+      e.x += ((dx / d) * e.speed + e.kx) * dt;
+      e.z += ((dz / d) * e.speed + e.kz) * dt;
 
       if (d < e.r + 0.45 && e.hitCd <= 0) {
         hurtPlayer(e.damage, e.x, e.z);
@@ -576,7 +541,7 @@ function EnemySlot({ i, kind }: { i: number; kind: BossId }) {
     g.rotation.y = e.heading;
     const s = e.dying > 0 ? ENEMY_SCALE * (1 + e.dying * 2) * (1 - e.dying / 0.35) : ENEMY_SCALE;
     g.scale.setScalar(Math.max(0.01, s));
-    animateMonster(kind, parts, state.clock.elapsedTime + i * 0.37, e.dashing > 0 ? 2 : 1);
+    animateMonster(kind, parts, state.clock.elapsedTime + i * 0.37, 1);
     flashMonster(parts, e.dying > 0 ? 1 : e.flash);
   });
   return (
@@ -586,10 +551,9 @@ function EnemySlot({ i, kind }: { i: number; kind: BossId }) {
   );
 }
 
-/** Player projectiles and enemy ink: two instanced meshes, one draw call each. */
+/** Player projectiles: one instanced mesh, one draw call. */
 function Shots() {
   const bullets = useRef<THREE.InstancedMesh>(null);
-  const ink = useRef<THREE.InstancedMesh>(null);
   const bulletMat = useMemo(() => new THREE.MeshBasicMaterial({ color: "#ffd23f" }), []);
   useFrame((state) => {
     const w = WEAPONS[useCombat.getState().weapon];
@@ -607,16 +571,11 @@ function Shots() {
       mesh.instanceMatrix.needsUpdate = true;
     };
     write(bullets.current, sim.shots, w.kind === "rocket" ? 2.2 : 1, 0.95);
-    write(ink.current, sim.ink, 1.4 + Math.sin(state.clock.elapsedTime * 20) * 0.1, 0.8);
   });
   return (
     <>
       <instancedMesh ref={bullets} args={[undefined, bulletMat, sim.shots.length]} frustumCulled={false}>
         <sphereGeometry args={[0.13, 8, 8]} />
-      </instancedMesh>
-      <instancedMesh ref={ink} args={[undefined, undefined, sim.ink.length]} frustumCulled={false}>
-        <sphereGeometry args={[0.16, 8, 8]} />
-        <meshBasicMaterial color="#3b1d6e" />
       </instancedMesh>
     </>
   );
