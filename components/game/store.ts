@@ -26,14 +26,7 @@ export const useGame = create<State>((set, get) => ({
   reward: null,
   setReady: () => set({ ready: true }),
   start: () => set({ started: true }),
-  setEntered: () => {
-    try {
-      sessionStorage.setItem("island-entered", "1");
-    } catch {
-      /* ignore */
-    }
-    set({ entered: true });
-  },
+  setEntered: () => set({ entered: true }),
   enter: (zone) => {
     if (zone === get().zone) return;
     if (zone && !get().visited.includes(zone)) {

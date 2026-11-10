@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { experience, profile } from "@/content/portfolio";
 import { YEARS_EXPERIENCE } from "../world";
 import { intro, useGame } from "../store";
@@ -11,31 +11,16 @@ const COMMIT = 0.04;
 
 /**
  * Game-style title screen over a cinematic orbit of the island. Scroll down,
- * press ↓ / Enter / Space, or hit PLAY to dive in. One-way: progress never
- * goes back, and a refresh in the same tab skips straight to the game.
+ * press ↓ / Enter / Space, or hit PLAY to dive in. One-way: once you're on
+ * the island, scrolling or clicking never brings the title screen back.
  */
 export function IntroScreen() {
   const entered = useGame((s) => s.entered);
   const ready = useGame((s) => s.ready);
   const root = useRef<HTMLDivElement>(null);
-  const [skip, setSkip] = useState(false);
 
   useEffect(() => {
-    let seen = false;
-    try {
-      seen = sessionStorage.getItem("island-entered") === "1";
-    } catch {
-      /* ignore */
-    }
-    if (seen) {
-      intro.p = intro.target = 1;
-      setSkip(true);
-      useGame.getState().setEntered();
-    }
-  }, []);
-
-  useEffect(() => {
-    if (entered || skip) return;
+    if (entered) return;
     const push = (amount: number) => {
       if (!useGame.getState().ready) return; // wait for the island to load
       intro.target = Math.min(1, intro.target + amount);
@@ -90,9 +75,9 @@ export function IntroScreen() {
       window.removeEventListener("touchmove", onTouchMove);
       window.removeEventListener("keydown", onKey);
     };
-  }, [entered, skip]);
+  }, [entered]);
 
-  if (entered || skip) return null;
+  if (entered) return null;
 
   const current = experience[0];
   return (
